@@ -89,7 +89,7 @@ export default function Services() {
                     src={service.image}
                     alt={service.title}
                     fill
-                    className="object-cover grayscale hover:grayscale-0 transition-all duration-300"
+                    className="object-cover  hover:grayscale-0 transition-all duration-300"
                   />
                   <div className="absolute top-4 right-4 bg-white/10 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                     <ArrowUpRightIcon className="h-5 w-5 text-white" />
