@@ -427,7 +427,7 @@ export default function Configurator(): JSX.Element {
             Reprogrammation Moteur
           </h2>
           <p className="text-gray-400 max-w-2xl mx-auto">
-            Découvrez le potentiel de performance de votre véhicule
+            Découvrez le potentiel de performance de votre véhicule !
           </p>
         </div>
 
