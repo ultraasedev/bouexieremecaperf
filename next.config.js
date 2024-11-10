@@ -27,6 +27,9 @@ const nextConfig = {
   output: 'standalone',
   poweredByHeader: false,
   reactStrictMode: true,
+  experimental: {
+    appDir: true,
+  },
   // Gestion des erreurs
   onDemandEntries: {
     // Période pendant laquelle une page doit rester inutilisée avant d'être disposée

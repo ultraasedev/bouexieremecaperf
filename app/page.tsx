@@ -5,6 +5,8 @@ import Services from "@/components/home/Services";
 import { Testimonials } from "@/components/home/Testimonials";
 import { Footer } from "@/components/layout/Footer";
 import Navigation from "@/components/layout/Navigation";
+import Configurator from "@/components/tuning/Configurator";
+
 import Image from "next/image";
 
 export default function Home() {
@@ -14,6 +16,7 @@ export default function Home() {
     <Hero />
     <Services />
     <Presentation />
+    <Configurator/>
     <Blog />
     <Testimonials/>
     <Footer/>

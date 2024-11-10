@@ -1,54 +1,67 @@
-import NextAuth from 'next-auth';
+// pages/api/auth/[...nextauth].ts
+'use client';
+import NextAuth, { AuthOptions, SessionStrategy } from "next-auth";
+import { JWT } from "next-auth/jwt";
+import { Session } from "next-auth";
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcryptjs'; 
 
-const handler = NextAuth({
+const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
-      name: 'credentials',
+      name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Mot de passe", type: "password" }
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      authorize: async (credentials) => {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('Identifiants requis');
+          throw new Error("Veuillez fournir un email et un mot de passe");
         }
 
         const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email
-          }
+          where: { email: credentials.email },
         });
 
-        if (!user || !user?.password) {
-          throw new Error('Email invalide');
+        if (!user || !user.hashedPassword) {
+          throw new Error("Aucun utilisateur trouvé ou mot de passe incorrect");
         }
 
-        const isCorrectPassword = await bcrypt.compare(
+        const isPasswordValid = await bcrypt.compare(
           credentials.password,
-          user.password
+          user.hashedPassword
         );
 
-        if (!isCorrectPassword) {
-          throw new Error('Mot de passe invalide');
+        if (!isPasswordValid) {
+          throw new Error("Mot de passe incorrect");
         }
 
-        return user;
-      }
-    })
+        return { id: user.id, email: user.email, name: user.name };
+      },
+    }),
   ],
-  session: {
-    strategy: "jwt",
-  },
-  pages: {
-    signIn: '/auth/login',
-  },
-  debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
-});
+  session: {
+    strategy: "jwt" as SessionStrategy, // Assurez-vous d'utiliser "jwt" ou "database" ici
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      session.user.id = token.id;
+      return session;
+    },
+  },
+};
+
+// Utilisez la fonction `NextAuth` avec export const
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
