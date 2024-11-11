@@ -177,36 +177,34 @@ export default function Configurator(): JSX.Element {
             `}
           >
             <div className="flex flex-col items-center space-y-4">
-              <Image
-                src={logo}
-                alt={marque}
-                width={96}
-                height={96}
-                className="object-contain transition-transform duration-300 group-hover:scale-110"
-              />
+              <div className="relative w-24 h-24">
+                <Image
+                  src={logo}
+                  alt={marque}
+                  width={96}
+                  height={96}
+                  className="object-contain transition-transform duration-300 group-hover:scale-110"
+                  onError={(e) => {
+                    // Fallback pour les images qui ne chargent pas
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
+              </div>
               <span className="text-white font-bold text-lg">{marque}</span>
             </div>
           </button>
         ))}
       </div>
-
-      <div className="text-center">
-        <button
-          onClick={() => setShowAllBrands(!showAllBrands)}
-          className="text-white hover:text-red-500 transition-colors"
-        >
-          {showAllBrands ? '← Retour aux marques principales' : 'Voir toutes les marques →'}
-        </button>
-      </div>
-
-      {showAllBrands && (
+  
+      {showAllBrands && allMakes.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
         >
           {allMakes
-            .filter(make => !FEATURED_BRANDS[make.make_display as keyof typeof FEATURED_BRANDS])
+            .filter(make => !FEATURED_BRANDS[make.make_display])
             .map(make => (
               <button
                 key={make.make_id}
