@@ -3,8 +3,14 @@
 
 import { MagnifyingGlassIcon, BellIcon } from '@heroicons/react/24/outline';
 import { useSession } from 'next-auth/react';
+import { UserPayload } from '@/types/auth';
 
-export default function Topbar() {
+// components/dashboard/Topbar.tsx
+interface TopbarProps {
+  user: UserPayload;
+}
+
+export default function Topbar({ user }: TopbarProps) {
   const { data: session } = useSession();
 
   return (

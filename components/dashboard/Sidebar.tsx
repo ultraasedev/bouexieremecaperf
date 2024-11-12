@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
+import { UserPayload } from '@/types/auth';
 import { 
   Squares2X2Icon,
   BellIcon,
@@ -32,7 +33,12 @@ interface MenuSection {
   items: MenuItem[];
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  user: UserPayload;
+}
+
+
+export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
 
   const menuSections: MenuSection[] = [

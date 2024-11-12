@@ -6,8 +6,13 @@ import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Area, AreaChart
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
 } from 'recharts';
 
 // Types
@@ -31,7 +36,29 @@ interface QuoteData {
   vehicleInfo: string;
 }
 
-// Exemple de données
+interface StatsCardProps {
+  title: string;
+  value: string | number;
+  change: string;
+  color: 'emerald' | 'red' | 'blue' | 'purple';
+  delay?: number;
+}
+
+// Composant pour les cartes de statistiques
+const StatsCard = ({ title, value, change, color, delay = 0 }: StatsCardProps) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay }}
+    className={`bg-${color}-500/20 border border-${color}-500/30 rounded-lg p-6`}
+  >
+    <h3 className={`text-${color}-500 text-sm font-semibold mb-2`}>{title}</h3>
+    <div className="text-3xl font-bold text-white">{value}</div>
+    <div className={`text-${color}-500 text-sm mt-1`}>{change}</div>
+  </motion.div>
+);
+
+// Données exemple
 const revenueData = [
   { name: 'Jan', value: 12500 },
   { name: 'Fév', value: 15800 },
@@ -108,48 +135,33 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-emerald-500/20 border border-emerald-500/30 rounded-lg p-6"
-        >
-          <h3 className="text-emerald-500 text-sm font-semibold mb-2">RDV ce mois</h3>
-          <div className="text-3xl font-bold text-white">24</div>
-          <div className="text-emerald-500 text-sm mt-1">+15% vs mois dernier</div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-red-500/20 border border-red-500/30 rounded-lg p-6"
-        >
-          <h3 className="text-red-500 text-sm font-semibold mb-2">Devis en attente</h3>
-          <div className="text-3xl font-bold text-white">8</div>
-          <div className="text-red-500 text-sm mt-1">Valeur: 6 450€</div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-6"
-        >
-          <h3 className="text-blue-500 text-sm font-semibold mb-2">CA du mois</h3>
-          <div className="text-3xl font-bold text-white">21 000€</div>
-          <div className="text-blue-500 text-sm mt-1">+8% vs mois dernier</div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-purple-500/20 border border-purple-500/30 rounded-lg p-6"
-        >
-          <h3 className="text-purple-500 text-sm font-semibold mb-2">Taux conversion</h3>
-          <div className="text-3xl font-bold text-white">82%</div>
-          <div className="text-purple-500 text-sm mt-1">+5% vs mois dernier</div>
-        </motion.div>
+        <StatsCard
+          title="RDV ce mois"
+          value="24"
+          change="+15% vs mois dernier"
+          color="emerald"
+        />
+        <StatsCard
+          title="Devis en attente"
+          value="8"
+          change="Valeur: 6 450€"
+          color="red"
+          delay={0.1}
+        />
+        <StatsCard
+          title="CA du mois"
+          value="21 000€"
+          change="+8% vs mois dernier"
+          color="blue"
+          delay={0.2}
+        />
+        <StatsCard
+          title="Taux conversion"
+          value="82%"
+          change="+5% vs mois dernier"
+          color="purple"
+          delay={0.3}
+        />
       </div>
 
       {/* Graphique CA */}
@@ -193,7 +205,7 @@ export default function DashboardPage() {
               <Tooltip
                 contentStyle={{ backgroundColor: '#1a1a1a', borderColor: '#333' }}
                 labelStyle={{ color: '#fff' }}
-                formatter={(value: number) => [`${value}€`, 'CA']}
+                formatter={(value: number) => [`${value.toLocaleString()}€`, 'CA']}
               />
               <Area
                 type="monotone"
@@ -215,7 +227,9 @@ export default function DashboardPage() {
           transition={{ delay: 0.3 }}
           className="bg-[#1a1a1a] rounded-lg p-6"
         >
-          <h2 className="text-white font-semibold mb-4">Prochains rendez-vous</h2>
+          <h2 className="text-white font-semibold mb-4">
+            Prochains rendez-vous
+          </h2>
           <div className="space-y-4">
             {nextAppointments.map((appointment) => (
               <div
@@ -223,9 +237,15 @@ export default function DashboardPage() {
                 className="flex items-center justify-between p-4 bg-black/50 rounded-lg"
               >
                 <div>
-                  <p className="text-white font-medium">{appointment.clientName}</p>
-                  <p className="text-sm text-gray-400">{appointment.vehicleBrand} {appointment.vehicleModel}</p>
-                  <p className="text-sm text-gray-400">{appointment.service}</p>
+                  <p className="text-white font-medium">
+                    {appointment.clientName}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    {appointment.vehicleBrand} {appointment.vehicleModel}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    {appointment.service}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-white">
@@ -235,8 +255,8 @@ export default function DashboardPage() {
                     {format(new Date(appointment.date), 'HH:mm')}
                   </p>
                   <span className={`text-xs px-2 py-1 rounded-full ${
-                    appointment.status === 'confirmed' 
-                      ? 'bg-emerald-500/20 text-emerald-500' 
+                    appointment.status === 'confirmed'
+                      ? 'bg-emerald-500/20 text-emerald-500'
                       : 'bg-yellow-500/20 text-yellow-500'
                   }`}>
                     {appointment.status === 'confirmed' ? 'Confirmé' : 'En attente'}
@@ -253,7 +273,9 @@ export default function DashboardPage() {
           transition={{ delay: 0.4 }}
           className="bg-[#1a1a1a] rounded-lg p-6"
         >
-          <h2 className="text-white font-semibold mb-4">Derniers devis</h2>
+          <h2 className="text-white font-semibold mb-4">
+            Derniers devis
+          </h2>
           <div className="space-y-4">
             {recentQuotes.map((quote) => (
               <div
@@ -261,12 +283,20 @@ export default function DashboardPage() {
                 className="flex items-center justify-between p-4 bg-black/50 rounded-lg"
               >
                 <div>
-                  <p className="text-white font-medium">{quote.clientName}</p>
-                  <p className="text-sm text-gray-400">{quote.vehicleInfo}</p>
-                  <p className="text-sm text-gray-400">{quote.service}</p>
+                  <p className="text-white font-medium">
+                    {quote.clientName}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    {quote.vehicleInfo}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    {quote.service}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-white font-medium">{quote.amount}€</p>
+                  <p className="text-white font-medium">
+                    {quote.amount.toLocaleString()}€
+                  </p>
                   <p className="text-sm text-gray-400">
                     {format(new Date(quote.date), 'dd MMM yyyy', { locale: fr })}
                   </p>
@@ -277,7 +307,9 @@ export default function DashboardPage() {
                       ? 'bg-red-500/20 text-red-500'
                       : 'bg-yellow-500/20 text-yellow-500'
                   }`}>
-                    {quote.status === 'accepted' ? 'Accepté' : quote.status === 'rejected' ? 'Refusé' : 'En attente'}
+                    {quote.status === 'accepted' ? 'Accepté' 
+                      : quote.status === 'rejected' ? 'Refusé' 
+                      : 'En attente'}
                   </span>
                 </div>
               </div>

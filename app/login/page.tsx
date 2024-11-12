@@ -17,25 +17,34 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
+      console.log('🔄 Tentative de connexion...'); // Log de tentative
+
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password }),
-        cache: 'no-store'
+        credentials: 'include' // Important pour les cookies
       });
 
-      if (!response.ok) {
-        const data = await response.json();
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.log('❌ Échec de la connexion:', data.error); // Log d'échec
         throw new Error(data.error || 'Une erreur est survenue');
       }
 
-      const data = await response.json();
-      console.log('Connexion réussie:', data);
-      router.push('/dashboard');
+      console.log('✅ Connexion réussie!', data); // Log de succès
+
+      // Attendre un court instant pour s'assurer que le cookie est bien défini
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Force une redirection dure
+      window.location.href = '/dashboard';
+
     } catch (err) {
-      console.error('Erreur de connexion:', err);
+      console.error('❌ Erreur de connexion:', err);
       setError(err instanceof Error ? err.message : 'Une erreur est survenue');
     } finally {
       setIsLoading(false);
@@ -91,10 +100,21 @@ export default function LoginPage() {
             disabled={isLoading}
             className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-full transition-colors disabled:opacity-50"
           >
-            {isLoading ? 'Connexion...' : 'Se connecter'}
+            {isLoading ? (
+              <span className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Connexion...
+              </span>
+            ) : (
+              'Se connecter'
+            )}
           </button>
         </form>
       </div>
     </div>
   );
 }
+
