@@ -37,6 +37,7 @@ const FEATURED_BRANDS: { [key: string]: string } = {
   'Hyundai': '/logos/hyundai.png',
   'Skoda': '/logos/skoda.png',
   'Toyota': '/logos/toyota.png',
+  'Opel': '/logos/opel.png',
 };
 
 export default function Configurator(): JSX.Element {
@@ -162,9 +163,9 @@ export default function Configurator(): JSX.Element {
       initial="hidden"
       animate="visible"
       exit="exit"
-      className="space-y-8"
+      className="space-y-8" id="#performance"
     >
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"  id="#performance">
         {Object.entries(FEATURED_BRANDS).map(([marque, logo]) => (
           <button
             key={marque}

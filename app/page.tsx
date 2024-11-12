@@ -1,4 +1,6 @@
 import { Blog } from "@/components/home/BlogSection";
+import Contact from "@/components/home/Contact";
+import FAQ from "@/components/home/Faq";
 import Hero from "@/components/home/Hero";
 import { Presentation } from "@/components/home/Presentation";
 import Services from "@/components/home/Services";
@@ -19,6 +21,8 @@ export default function Home() {
     <Configurator/>
     <Blog />
     <Testimonials/>
+    <Contact/>
+    <FAQ/>
     <Footer/>
   </main>
   );

@@ -1,68 +1,100 @@
-// pages/login.tsx
+// app/login/page.tsx
 'use client';
-import { signIn } from "next-auth/react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-const LoginPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await signIn("credentials", {
-      redirect: false,
-      email,
-      password,
-    });
+    setIsLoading(true);
+    setError('');
 
-    if (!result?.error) {
-      router.push("/"); // Redirige vers la page d'accueil ou une autre page protégée
-    } else {
-      setError("Email ou mot de passe incorrect");
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+        cache: 'no-store'
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Une erreur est survenue');
+      }
+
+      const data = await response.json();
+      console.log('Connexion réussie:', data);
+      router.push('/dashboard');
+    } catch (err) {
+      console.error('Erreur de connexion:', err);
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black text-white">
-      <div className="bg-gray-900 p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-3xl font-bold text-red-600 mb-6 text-center">Connexion</h1>
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+    <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="bg-[#111] p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h1 className="text-3xl font-bold text-white mb-6 text-center">
+          Connexion
+        </h1>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-gray-400">Email</label>
+            <label htmlFor="email" className="block text-gray-400 mb-2">
+              Email
+            </label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 rounded bg-gray-800 border border-gray-700 focus:border-red-600 text-white"
+              className="w-full bg-black border border-gray-800 rounded px-4 py-2 text-white focus:border-red-500 focus:ring-1 focus:ring-red-500"
               required
+              autoComplete="email"
             />
           </div>
+
           <div>
-            <label className="block text-gray-400">Mot de passe</label>
+            <label htmlFor="password" className="block text-gray-400 mb-2">
+              Mot de passe
+            </label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 rounded bg-gray-800 border border-gray-700 focus:border-red-600 text-white"
+              className="w-full bg-black border border-gray-800 rounded px-4 py-2 text-white focus:border-red-500 focus:ring-1 focus:ring-red-500"
               required
+              autoComplete="current-password"
             />
           </div>
+
           <button
             type="submit"
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-full transition-colors"
+            disabled={isLoading}
+            className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-full transition-colors disabled:opacity-50"
           >
-            Se connecter
+            {isLoading ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
       </div>
     </div>
   );
-};
-
-export default LoginPage;
+}

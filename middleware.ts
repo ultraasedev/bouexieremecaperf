@@ -1,24 +1,29 @@
 // middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verify } from 'jsonwebtoken';
 
-export function middleware(request: NextRequest) {
-  const response = NextResponse.next();
+const JWT_SECRET = process.env.JWT_SECRET || 'votre-secret-tres-securise';
 
-  // Configuration CORS
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set(
-    'Access-Control-Allow-Methods',
-    'GET, POST, PUT, DELETE, OPTIONS'
-  );
-  response.headers.set(
-    'Access-Control-Allow-Headers',
-    'Content-Type, Authorization'
-  );
+export async function middleware(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith('/dashboard')) {
+    const token = request.cookies.get('auth_token')?.value;
 
-  return response;
+    if (!token) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    try {
+      verify(token, JWT_SECRET);
+      return NextResponse.next();
+    } catch {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: '/api/:path*',
+  matcher: ['/dashboard/:path*']
 };

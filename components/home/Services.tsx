@@ -1,6 +1,4 @@
-// components/home/Services.tsx
 'use client';
-
 import Image from 'next/image';
 import { ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { useRef } from 'react';
@@ -30,6 +28,7 @@ const services = [
     title: 'REPROGRAMMATION',
     image: '/services/performance.jpg',
     description: 'Optimisation moteur sur mesure pour améliorer les performances et la consommation de votre véhicule.',
+    comingSoon: true,
   },
   {
     title: 'ENTRETIEN',
@@ -82,18 +81,23 @@ export default function Services() {
             {services.map((service, index) => (
               <div 
                 key={index}
-                className="min-w-[300px] md:min-w-[350px] bg-[#111] rounded-lg overflow-hidden snap-start"
+                className="min-w-[300px] md:min-w-[350px] bg-[#111] rounded-lg overflow-hidden snap-start relative"
               >
                 <div className="relative h-[200px] group">
                   <Image
                     src={service.image}
                     alt={service.title}
                     fill
-                    className="object-cover  hover:grayscale-0 transition-all duration-300"
+                    className="object-cover hover:grayscale-0 transition-all duration-300"
                   />
                   <div className="absolute top-4 right-4 bg-white/10 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                     <ArrowUpRightIcon className="h-5 w-5 text-white" />
                   </div>
+                  {service.comingSoon && (
+                    <div className="absolute top-4 left-4 bg-red-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                      SERVICE PROCHAINEMENT DISPONIBLE
+                    </div>
+                  )}
                 </div>
                 <div className="p-6">
                   <h3 className="text-xl font-bold text-white mb-2">{service.title}</h3>
@@ -117,4 +121,3 @@ export default function Services() {
     </section>
   );
 }
-
