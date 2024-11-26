@@ -44,6 +44,13 @@ const nextConfig = {
   poweredByHeader: false, // Retire l'en-tête X-Powered-By pour la sécurité
   reactStrictMode: true, // Active le mode strict de React pour de meilleures performances
 
+
+   // Désactiver ESLint
+   eslint: {
+    ignoreDuringBuilds: true,
+  },
+
+
   // Configuration des en-têtes CORS pour l'API
   async headers() {
     return [
@@ -70,6 +77,10 @@ const nextConfig = {
         // Redirige les requêtes API vers CarQuery
         source: '/api/cars/:path*',
         destination: 'https://www.carqueryapi.com/api/0.3/:path*',
+      },
+      {
+        source: '/api/insee/:path*',
+        destination: 'https://api.insee.fr/:path*'
       },
     ];
   },

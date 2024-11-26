@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Navigation from '@/components/layout/Navigation';
 import { Footer } from '@/components/layout/Footer';
 import ShareButtons from './ShareButton';
+import { useEffect, useRef } from 'react';
 
 interface BlogPost {
   id: string;
@@ -27,6 +28,51 @@ interface BlogPostProps {
 }
 
 export default function BlogPost({ post }: BlogPostProps) {
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (contentRef.current) {
+      // Sélectionner et styler les éléments du contenu
+      const content = contentRef.current;
+
+      // Styler l'article parent
+      const articles = content.getElementsByTagName('article');
+      for (const article of articles) {
+        article.classList.add('text-white');
+      }
+
+      // Styler les titres h2
+      const h2s = content.getElementsByTagName('h2');
+      for (const h2 of h2s) {
+        h2.classList.add('text-red-500', 'text-2xl', 'font-bold', 'mt-8', 'mb-4');
+      }
+
+      // Styler les paragraphes
+      const paragraphs = content.getElementsByTagName('p');
+      for (const p of paragraphs) {
+        p.classList.add('mb-4', 'text-white/90');
+      }
+
+      // Styler les listes
+      const uls = content.getElementsByTagName('ul');
+      for (const ul of uls) {
+        ul.classList.add('list-disc', 'list-inside', 'mb-4', 'space-y-2', 'text-white/90');
+      }
+
+      // Styler les éléments de liste
+      const lis = content.getElementsByTagName('li');
+      for (const li of lis) {
+        li.classList.add('text-white/90');
+      }
+
+      // Styler les titres h3
+      const h3s = content.getElementsByTagName('h3');
+      for (const h3 of h3s) {
+        h3.classList.add('text-white', 'text-xl', 'font-bold', 'mt-6', 'mb-3');
+      }
+    }
+  }, [post.content]);
+
   return (
     <>
       <Navigation />
@@ -75,12 +121,9 @@ export default function BlogPost({ post }: BlogPostProps) {
         {/* Contenu de l'article */}
         <div className="max-w-4xl mx-auto px-4 py-12">
           <motion.div
+            ref={contentRef}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="prose prose-invert prose-red max-w-none
-              prose-h1:text-red-500 prose-h2:text-red-500 prose-h3:text-red-500 
-              prose-p:text-white/90 prose-strong:text-white
-              prose-headings:font-bold prose-h2:text-2xl prose-h3:text-xl"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
           

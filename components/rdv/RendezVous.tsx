@@ -11,6 +11,8 @@ import VehicleForm from "./VehicleForm";
 import ServiceForm from "./ServiceForm";
 import DateTimeForm from "./DateTimeForm";
 import ConfirmationStep from "./ConfirmationStep";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/use-toast";
 
 type FormData = {
   // Informations personnelles
@@ -18,6 +20,7 @@ type FormData = {
   lastName: string;
   email: string;
   phone: string;
+  address: string; // Ajout du champ adresse
   // Informations véhicule
   brand: string;
   model: string;
@@ -32,29 +35,34 @@ type FormData = {
 };
 
 const steps = [
-  { id: 1, name: "Contact" },
-  { id: 2, name: "Véhicule" },
-  { id: 3, name: "Service" },
-  { id: 4, name: "Date & Heure" },
-  { id: 5, name: "Confirmation" },
+  { id: 1, name: "Contact", description: "Vos informations" },
+  { id: 2, name: "Véhicule", description: "Détails du véhicule" },
+  { id: 3, name: "Service", description: "Type d'intervention" },
+  { id: 4, name: "Date & Heure", description: "Choix du créneau" },
+  { id: 5, name: "Confirmation", description: "Validation finale" },
 ];
+
+const initialFormData: FormData = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  address: "",
+  brand: "",
+  model: "",
+  year: "",
+  trim: "",
+  serviceType: "diagnostic",
+  description: "",
+  date: "",
+  time: "",
+};
 
 export default function RendezVous() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<FormData>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    brand: "",
-    model: "",
-    year: "",
-    trim: "",
-    serviceType: "diagnostic",
-    description: "",
-    date: "",
-    time: "",
-  });
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const router = useRouter();
+  const { toast } = useToast();
 
   const handleNext = () => {
     setCurrentStep((prev) => prev + 1);
@@ -66,6 +74,17 @@ export default function RendezVous() {
     setCurrentStep((prev) => prev - 1);
     // Scroll to top on step change
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleComplete = () => {
+    // Réinitialiser le formulaire
+    setFormData(initialFormData);
+    setCurrentStep(1);
+
+    // Redirection vers la page d'accueil avec un délai
+    setTimeout(() => {
+      router.push("/");
+    }, 3000);
   };
 
   const updateFormData = (data: Partial<FormData>) => {
@@ -96,8 +115,7 @@ export default function RendezVous() {
           </motion.div>
 
           {/* Progression */}
-
-          <div className="mb-8">
+          <div className="mb-12">
             <div className="relative">
               {/* Ligne de progression */}
               <div className="absolute top-4 left-0 right-0 h-0.5 bg-gray-700">
@@ -115,7 +133,7 @@ export default function RendezVous() {
                   <div key={step.id} className="flex flex-col items-center">
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 transition-colors duration-200 z-10 
-              ${step.id <= currentStep ? "bg-red-600" : "bg-gray-700"}`}
+                        ${step.id <= currentStep ? "bg-red-600" : "bg-gray-700"}`}
                     >
                       <span className="text-white text-sm font-medium">
                         {step.id}
@@ -123,9 +141,12 @@ export default function RendezVous() {
                     </div>
                     <span
                       className={`text-sm transition-colors duration-200 whitespace-nowrap
-              ${step.id <= currentStep ? "text-white" : "text-gray-500"}`}
+                        ${step.id <= currentStep ? "text-white" : "text-gray-500"}`}
                     >
                       {step.name}
+                    </span>
+                    <span className="text-xs text-gray-500 whitespace-nowrap">
+                      {step.description}
                     </span>
                   </div>
                 ))}
@@ -171,7 +192,11 @@ export default function RendezVous() {
               />
             )}
             {currentStep === 5 && (
-              <ConfirmationStep data={formData} onPrevious={handlePrevious} />
+              <ConfirmationStep 
+                data={formData}
+                onPrevious={handlePrevious}
+                onComplete={handleComplete}
+              />
             )}
           </motion.div>
         </div>

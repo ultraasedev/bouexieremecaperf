@@ -40,16 +40,48 @@ model User {
   emailVerified DateTime?
   image         String?
   hashedPassword String?
-  role          String      @default("client")
+  role          String      @default("user")
   phone         String?
   address       String?
   createdAt     DateTime    @default(now())
   accounts      Account[]
   sessions      Session[]
-  appointments  Appointment[]
-  invoices      Invoice[]
 }
 
+model Client {
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  type          String      // 'individual' ou 'company'
+  name          String?     // Pour les entreprises
+  firstName     String?     // Pour les particuliers
+  lastName      String?     // Pour les particuliers
+  siret         String?     // Pour les entreprises
+  vatNumber     String?     // Pour les entreprises (numéro TVA)
+  email         String      @unique
+  phone         String
+  address       String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  vehicles      Vehicle[]
+  appointments  Appointment[]
+  invoices      Invoice[]
+  quotes        Quote[]
+
+  // Index composé pour s'assurer que le SIRET est unique
+  @@index([siret, type])
+}
+model Vehicle {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  brand       String
+  model       String
+  year        Int
+  type        String
+  plate       String   @unique
+  vin         String?  @unique
+  clientId    String   @db.ObjectId
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
 model VerificationToken {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
   identifier String
@@ -58,25 +90,39 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
-
+enum AppointmentStatus {
+  PENDING    // En attente
+  CONFIRMED  // Confirmé
+  CANCELLED  // Annulé
+  MODIFIED   // Modifié
+  COMPLETED  // Terminé
+}
 model Appointment {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String   @db.ObjectId
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  clientId    String   @db.ObjectId
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   service       String
   vehicle       Json
   description   String?
   requestedDate DateTime
-  status        String   @default("pending")
+  status        AppointmentStatus @default(PENDING)
+   token         String   @unique // Token pour la gestion du rendez-vous
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   invoices      Invoice[]
 }
-
+model Availability {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  date      DateTime @unique
+  timeSlots Json[]
+  bookedSlots String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 model Invoice {
-  id            String      @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String      @db.ObjectId
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  clientId    String   @db.ObjectId
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   appointmentId String?     @db.ObjectId
   appointment   Appointment? @relation(fields: [appointmentId], references: [id])
   amount        Float
@@ -116,4 +162,72 @@ model Review {
   text      String
   image     String
   createdAt DateTime @default(now())
+}
+model Quote {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  number        String   @unique
+  date          DateTime @default(now())
+  validityDate  DateTime
+  status        QuoteStatus @default(DRAFT)
+  
+  // Montants
+  totalHT      Float
+  totalTTC     Float
+  totalVAT     Float
+  totalRemise  Float    @default(0)
+
+  // Client
+  clientId     String   @db.ObjectId
+  client       Client   @relation(fields: [clientId], references: [id])
+
+  // Contenu
+  items        Json[]    // Détails des articles/prestations
+  paymentDetails Json    // Conditions de paiement
+
+  // Suivi
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sentAt       DateTime?
+  viewedAt     DateTime?
+
+  // Notes et commentaires
+  notes        String?
+  internalNotes String?
+
+  // Tracking email
+  emailData    EmailData[]
+  events       QuoteEvent[]
+}
+
+// Statuts possibles pour un devis
+enum QuoteStatus {
+  DRAFT       // Brouillon
+  SENT        // Envoyé
+  VIEWED      // Consulté
+  ACCEPTED    // Accepté
+  REJECTED    // Refusé
+  EXPIRED     // Expiré
+  CANCELLED   // Annulé
+}
+
+// Table pour le suivi des emails
+model EmailData {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  quoteId     String   @db.ObjectId
+  quote       Quote    @relation(fields: [quoteId], references: [id])
+  messageId   String
+  recipients  String[]
+  subject     String
+  sentAt      DateTime
+  createdAt   DateTime @default(now())
+}
+
+// Table pour les événements liés aux devis
+model QuoteEvent {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  quoteId     String   @db.ObjectId
+  quote       Quote    @relation(fields: [quoteId], references: [id])
+  type        String   // EMAIL_SENT, EMAIL_OPENED, etc.
+  metadata    Json
+  createdAt   DateTime @default(now())
 }

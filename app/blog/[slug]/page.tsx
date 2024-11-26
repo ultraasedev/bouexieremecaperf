@@ -1,5 +1,5 @@
 // app/blog/[slug]/page.tsx
-import type { Metadata } from 'next';
+import { generateArticleMetadata } from '../metadata';
 import { notFound } from 'next/navigation';
 import BlogPost from '@/components/blog/BlogPost';
 import { blogPosts } from '@/data/blog';
@@ -8,7 +8,7 @@ interface Props {
   params: { slug: string }
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props) {
   const post = blogPosts.find(post => post.slug === params.slug);
   
   if (!post) {
@@ -17,25 +17,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  return {
-    title: `${post.title} | Bouëxière Méca Perf`,
-    description: post.excerpt,
-    openGraph: {
-      title: post.title,
-      description: post.excerpt,
-      type: 'article',
-      publishedTime: post.date,
-      authors: ['Bouëxière Méca Perf'],
-      images: [
-        {
-          url: `https://bouexiere-meca-perf.fr${post.image}`,
-          width: 1200,
-          height: 630,
-          alt: post.title,
-        },
-      ],
-    },
-  };
+  return generateArticleMetadata(
+    post.title,
+    post.excerpt,
+    post.image,
+    post.date
+  );
 }
 
 export async function generateStaticParams() {

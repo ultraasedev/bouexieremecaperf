@@ -1,177 +1,106 @@
 // components/dashboard/Sidebar.tsx
-'use client';
-
-import { useState } from 'react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { signOut } from 'next-auth/react';
-import { UserPayload } from '@/types/auth';
+import Link from 'next/link';
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  Squares2X2Icon,
-  BellIcon,
-  CalendarDaysIcon,
-  DocumentTextIcon,
-  CurrencyEuroIcon,
-  UserGroupIcon,
-  WrenchScrewdriverIcon,
-  ChartBarIcon,
-  NewspaperIcon,
-  PhotoIcon,
-  Cog6ToothIcon,
-  ArrowRightOnRectangleIcon,
-} from '@heroicons/react/24/outline';
-
-interface MenuItem {
-  name: string;
-  icon: any;
-  href: string;
-  badge?: number;
-}
-
-interface MenuSection {
-  title: string;
-  items: MenuItem[];
-}
+  LayoutDashboard, Users, Calendar, FileText, 
+  Settings, Mail, ImageIcon, LogOut, StarHalf,
+  Wrench, Car, Key, BookOpen, Globe, MessageSquare,
+  ScrollText, FileQuestion, Receipt, CreditCard
+} from 'lucide-react';
+import type { UserPayload } from '@/types/auth';
 
 interface SidebarProps {
   user: UserPayload;
 }
 
+const menuItems = [
+  {
+    title: "PRINCIPAL",
+    items: [
+      { title: "Vue d'ensemble", icon: LayoutDashboard, href: "/dashboard" },
+      { title: "Rendez-vous", icon: Calendar, href: "/dashboard/appointments" },
+    ]
+  },
+  {
+    title: "GESTION CLIENTS",
+    items: [
+      { title: "Clients", icon: Users, href: "/dashboard/clients" },
+      { title: "Devis", icon: ScrollText, href: "/dashboard/quotes" },
+      { title: "Factures", icon: Receipt, href: "/dashboard/factures" },
+      { title: "Paiements", icon: CreditCard, href: "/dashboard/paiements" },
+    ]
+  },
+  {
+    title: "PRESTATIONS",
+    items: [
+      { title: "Mécanique", icon: Key, href: "/dashboard/mecanique" },
+      { title: "Pièces Premium", icon: Wrench, href: "/dashboard/pieces" },
+      { title: "Reprog & Carto", icon: Car, href: "/dashboard/reprog", badge: "Bientôt" },
+    ]
+  },
+  {
+    title: "SITE WEB",
+    items: [
+      { title: "Blog", icon: BookOpen, href: "/dashboard/blog" },
+      { title: "Slider", icon: ImageIcon, href: "/dashboard/slider" },
+      { title: "Présentation", icon: Globe, href: "/dashboard/presentation" },
+      { title: "FAQ", icon: FileQuestion, href: "/dashboard/faq" },
+      { title: "Avis clients", icon: StarHalf, href: "/dashboard/reviews" },
+    ]
+  },
+  {
+    title: "COMMUNICATION",
+    items: [
+      { title: "Messagerie", icon: Mail, href: "/dashboard/emails" },
+      { title: "Messages", icon: MessageSquare, href: "/dashboard/messages" },
+    ]
+  }
+];
 
 export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
 
-  const menuSections: MenuSection[] = [
-    {
-      title: 'TABLEAU DE BORD',
-      items: [
-        {
-          name: 'Vue générale',
-          icon: Squares2X2Icon,
-          href: '/dashboard',
-        },
-        {
-          name: 'Notifications',
-          icon: BellIcon,
-          href: '/dashboard/notifications',
-          badge: 4 // Nombre de nouvelles notifications
-        },
-      ]
-    },
-    {
-      title: 'GESTION',
-      items: [
-        {
-          name: 'Rendez-vous',
-          icon: CalendarDaysIcon,
-          href: '/dashboard/appointments',
-          badge: 2 // Nombre de nouveaux RDV
-        },
-        {
-          name: 'Devis',
-          icon: DocumentTextIcon,
-          href: '/dashboard/quotes',
-          badge: 3 // Devis en attente
-        },
-        {
-          name: 'Factures',
-          icon: CurrencyEuroIcon,
-          href: '/dashboard/invoices',
-        },
-        {
-          name: 'Clients',
-          icon: UserGroupIcon,
-          href: '/dashboard/clients',
-        },
-        {
-          name: 'Services',
-          icon: WrenchScrewdriverIcon,
-          href: '/dashboard/services',
-        },
-        {
-          name: 'Performance',
-          icon: ChartBarIcon,
-          href: '/dashboard/performance',
-        },
-      ]
-    },
-    {
-      title: 'CONTENU',
-      items: [
-        {
-          name: 'Blog',
-          icon: NewspaperIcon,
-          href: '/dashboard/blog',
-        },
-        {
-          name: 'Médias',
-          icon: PhotoIcon,
-          href: '/dashboard/media',
-        },
-      ]
-    },
-    {
-      title: 'ADMIN',
-      items: [
-        {
-          name: 'Paramètres',
-          icon: Cog6ToothIcon,
-          href: '/dashboard/settings',
-        },
-        {
-          name: 'Déconnexion',
-          icon: ArrowRightOnRectangleIcon,
-          href: '/api/auth/signout',
-        },
-      ]
-    },
-  ];
-
   return (
-    <div className="w-64 min-h-screen bg-black border-r border-white/10">
-      {/* Logo */}
-      <div className="h-16 px-6 flex items-center border-b border-white/10">
-        <Link href="/" className="text-xl font-semibold text-white">
-          Bouëxiere Meca Perf
-        </Link>
+    <div className="w-64 bg-black border-r border-gray-800 flex flex-col min-h-screen">
+      <div className="h-16 flex items-center px-6 border-b border-gray-800">
+        <h1 className="text-xl font-bold">Bouexière Méca Perf</h1>
       </div>
 
-      {/* Navigation */}
-      <div className="p-4 space-y-8">
-        {menuSections.map((section, index) => (
-          <div key={index}>
-            <h3 className="text-xs text-gray-500 font-medium mb-3">
-              {section.title}
-            </h3>
-            <nav className="space-y-1">
-              {section.items.map((item, itemIndex) => {
-                const isActive = pathname === item.href;
-                return (
+      <ScrollArea className="flex-1 px-3 py-2">
+        <div className="space-y-6">
+          {menuItems.map((section, i) => (
+            <div key={i} className="mb-6">
+              <h2 className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                {section.title}
+              </h2>
+              <div className="space-y-1">
+                {section.items.map((item, j) => (
                   <Link
-                    key={itemIndex}
+                    key={j}
                     href={item.href}
-                    className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm group transition-colors ${
-                      isActive 
-                        ? 'text-white bg-white/10' 
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
+                    className={cn(
+                      "flex items-center gap-x-3 px-4 py-2 text-sm rounded-lg transition-colors",
+                      pathname === item.href 
+                        ? "bg-red-900 text-white" 
+                        : "text-gray-400 hover:text-white hover:bg-red-900/50"
+                    )}
                   >
-                    <div className="flex items-center gap-3">
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.name}</span>
-                    </div>
+                    <item.icon className="h-5 w-5 shrink-0" />
+                    <span className="truncate">{item.title}</span>
                     {item.badge && (
-                      <span className="px-2 py-0.5 text-xs rounded-full bg-red-600 text-white">
+                      <span className="ml-auto bg-gray-800 text-white text-xs px-2 py-0.5 rounded-full">
                         {item.badge}
                       </span>
                     )}
                   </Link>
-                );
-              })}
-            </nav>
-          </div>
-        ))}
-      </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
     </div>
   );
 }

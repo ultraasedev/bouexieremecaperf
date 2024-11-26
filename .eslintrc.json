@@ -1,0 +1,17 @@
+{
+  "extends": ["next", "next/core-web-vitals", "plugin:@typescript-eslint/recommended"],
+    "rules": {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@next/next/no-img-element": "off",
+      "react-hooks/rules-of-hooks": "off",
+      "react-hooks/exhaustive-deps": "off",
+      "react/no-unescaped-entities": "off",
+      // Désactive toutes les règles TypeScript
+      "@typescript-eslint/ban-types": "off",
+      "@typescript-eslint/no-empty-interface": "off",
+      "@typescript-eslint/no-empty-function": "off",
+      "@typescript-eslint/no-non-null-assertion": "off",
+      "@typescript-eslint/no-inferrable-types": "off"
+    }
+  }

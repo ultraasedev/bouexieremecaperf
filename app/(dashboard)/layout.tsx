@@ -1,59 +1,45 @@
-// app/(dashboard)/layout.tsx
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { jwtVerify } from 'jose';
-import { UserPayload } from '@/types/auth';
-import Sidebar from '@/components/dashboard/Sidebar';
-import Topbar from '@/components/dashboard/Topbar';
+// app/dashboard/layout.tsx
+"use client";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'votre-secret-tres-securise'
-);
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import type { UserPayload } from '@/types/auth';
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = cookies();
-  const token = cookieStore.get('auth_token')?.value;
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
-  if (!token) {
-    redirect('/login');
-  }
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth', {
+          credentials: 'include'
+        });
 
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    
-    // Vérification et extraction des données utilisateur
-    const userPayload: UserPayload = {
-      id: payload.id as string,
-      email: (payload.email as string) || null,
-      name: (payload.name as string) || null,
-      role: payload.role as string
+        if (!response.ok) {
+          throw new Error('Non authentifié');
+        }
+
+        setLoading(false);
+      } catch (error) {
+        router.push('/login');
+      }
     };
 
-    // Vérification de l'expiration
-    if (payload.exp && typeof payload.exp === 'number') {
-      const now = Math.floor(Date.now() / 1000);
-      if (payload.exp < now) {
-        redirect('/login');
-      }
-    }
+    checkAuth();
+  }, [router]);
 
+  if (loading) {
     return (
-      <div className="flex h-screen bg-black">
-        <Sidebar user={userPayload} />
-        <div className="flex-1 flex flex-col">
-          <Topbar user={userPayload} />
-          <main className="flex-1 overflow-auto bg-[#111] p-6">
-            {children}
-          </main>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-lg">Chargement...</p>
       </div>
     );
-  } catch (error) {
-    console.error('Erreur de vérification du token:', error);
-    redirect('/login');
   }
+
+  return <>{children}</>;
 }

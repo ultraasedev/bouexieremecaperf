@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Devis {{number}}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm;
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    .container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+
+    .logo {
+      max-width: 200px;
+      height: auto;
+    }
+
+    .company-info {
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    .quote-details {
+      text-align: right;
+      font-size: 0.9rem;
+    }
+
+    .client-info {
+      background-color: #f8f9fa;
+      padding: 1rem;
+      border-radius: 4px;
+      margin-bottom: 2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+    }
+
+    th, td {
+      padding: 0.75rem;
+      border-bottom: 1px solid #dee2e6;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f8f9fa;
+      font-weight: bold;
+    }
+
+    .amounts {
+      width: 300px;
+      margin-left: auto;
+    }
+
+    .amounts div {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+    }
+
+    .total-ttc {
+      font-weight: bold;
+      font-size: 1.1rem;
+      border-top: 2px solid #333;
+      padding-top: 0.5rem;
+    }
+
+    .payment-info {
+      margin: 2rem 0;
+    }
+
+    .signature-area {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 3rem;
+      page-break-inside: avoid;
+    }
+
+    .signature-box {
+      width: 45%;
+    }
+
+    .legal-notice {
+      font-size: 0.8rem;
+      color: #6c757d;
+      margin-top: 2rem;
+      border-top: 1px solid #dee2e6;
+      padding-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="company-info">
+        <img src="{{logo}}" alt="Logo" class="logo">
+        <p>Bouexiere Meca Performance</p>
+        <p>1 rue de la Mécanique</p>
+        <p>35340 La Bouexière</p>
+        <p>Tél : 02.99.XX.XX.XX</p>
+        <p>Email : contact@bmp.fr</p>
+      </div>
+      <div class="quote-details">
+        <h1>DEVIS</h1>
+        <p>N° {{number}}</p>
+        <p>Date : {{date}}</p>
+        <p>Validité : {{validityDate}}</p>
+      </div>
+    </div>
+
+    <div class="client-info">
+      <h3>CLIENT</h3>
+      {{#if clientInfo.type 'company'}}
+        <p><strong>{{clientInfo.company.name}}</strong></p>
+        <p>SIRET : {{clientInfo.company.siret}}</p>
+        {{#if clientInfo.company.vatNumber}}
+          <p>N° TVA : {{clientInfo.company.vatNumber}}</p>
+        {{/if}}
+      {{else}}
+        <p><strong>{{clientInfo.individual.firstName}} {{clientInfo.individual.lastName}}</strong></p>
+      {{/if}}
+      <p>{{clientInfo.address}}</p>
+      <p>Tél : {{clientInfo.phone}}</p>
+      <p>Email : {{clientInfo.email}}</p>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 40%">Description</th>
+          <th style="text-align: right">Quantité</th>
+          <th style="text-align: right">Prix unitaire HT</th>
+          <th style="text-align: right">TVA</th>
+          <th style="text-align: right">Remise</th>
+          <th style="text-align: right">Total HT</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each items}}
+        <tr>
+          <td>{{description}}</td>
+          <td style="text-align: right">{{quantity}} {{unit}}</td>
+          <td style="text-align: right">{{format unitPriceHT}}€</td>
+          <td style="text-align: right">{{vatRate}}%</td>
+          <td style="text-align: right">
+            {{#if discount}}
+              {{#if (eq discount.type 'percentage')}}
+                {{discount.value}}%
+              {{else}}
+                {{format discount.value}}€
+              {{/if}}
+            {{else}}
+              -
+            {{/if}}
+          </td>
+          <td style="text-align: right">{{format totalHT}}€</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+
+    <div class="amounts">
+      <div>
+        <span>Total HT :</span>
+        <span>{{format totals.totalHT}}€</span>
+      </div>
+      {{#if totals.totalRemise}}
+      <div class="text-muted">
+        <span>Remise totale :</span>
+        <span>-{{format totals.totalRemise}}€</span>
+      </div>
+      {{/if}}
+      <div>
+        <span>TVA :</span>
+        <span>{{format totals.totalTVA}}€</span>
+      </div>
+      <div class="total-ttc">
+        <span>Total TTC :</span>
+        <span>{{format totals.totalTTC}}€</span>
+      </div>
+    </div>
+
+    <div class="payment-info">
+      <h3>CONDITIONS DE RÈGLEMENT</h3>
+      <p>{{paymentConditionText}}</p>
+    </div>
+
+    {{#if notes}}
+    <div class="notes">
+      <h3>NOTES</h3>
+      <p>{{notes}}</p>
+    </div>
+    {{/if}}
+
+    <div class="legal-notice">
+      <p>TVA non applicable, art. 293 B du CGI</p>
+      <p>Auto-entrepreneur - Dispensé d'immatriculation au RCS et au RM</p>
+      <p>En cas d'acceptation, merci de retourner ce devis signé avec la mention "Bon pour accord"</p>
+    </div>
+
+    <div class="signature-area">
+      <div class="signature-box">
+        <p><strong>Bon pour accord</strong></p>
+        <p>Date et signature du client</p>
+        <div style="height: 100px; border: 1px dashed #ccc;"></div>
+      </div>
+      <div class="signature-box" style="text-align: right;">
+        <p><strong>Bouexiere Meca Performance</strong></p>
+        <img src="{{signature}}" alt="Signature" style="max-width: 150px; margin-top: 20px;">
+      </div>
+    </div>
+  </div>
+</body>
+</html>

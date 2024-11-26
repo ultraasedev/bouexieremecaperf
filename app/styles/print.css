@@ -1,0 +1,51 @@
+@media print {
+    /* Cacher les éléments non-imprimables */
+    .no-print,
+    button,
+    .dialog-overlay,
+    nav,
+    footer {
+      display: none !important;
+    }
+  
+    /* Configuration de la page */
+    @page {
+      size: A4;
+      margin: 20mm;
+    }
+  
+    body {
+      margin: 0;
+      padding: 0;
+    }
+  
+    /* Styles du devis */
+    .preview-content {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 20mm;
+      margin: 0 auto;
+      background: white;
+      box-shadow: none;
+    }
+  
+    /* Tables */
+    table {
+      page-break-inside: avoid;
+      width: 100%;
+    }
+  
+    /* Éviter les sauts de page indésirables */
+    h1, h2, h3, 
+    table thead,
+    table tr {
+      page-break-after: avoid;
+      page-break-inside: avoid;
+    }
+  
+    /* Zone de signature */
+    .signature-area {
+      page-break-inside: avoid;
+      margin-top: 50mm;
+    }
+  }
