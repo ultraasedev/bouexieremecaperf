@@ -39,8 +39,8 @@ export default function MentionsLegales() {
               <ul className="list-none space-y-2">
                 <li><strong className="text-white">Raison sociale :</strong> Bouëxière Méca Perf</li>
                 <li><strong className="text-white">Statut :</strong> Micro-entreprise</li>
-                <li><strong className="text-white">SIRET :</strong> [Votre numéro SIRET]</li>
-                <li><strong className="text-white">Adresse :</strong> [Votre adresse]</li>
+                <li><strong className="text-white">SIRET :</strong> 934 489 964 00015</li>
+                <li><strong className="text-white">Adresse :</strong> 28 RESIDENCE DES CHEVRETS, 22100 DINAN</li>
                 <li><strong className="text-white">Email :</strong> contact@bouexiere-meca-perf.fr</li>
                 <li><strong className="text-white">Téléphone :</strong> 06 61 86 55 43</li>
               </ul>

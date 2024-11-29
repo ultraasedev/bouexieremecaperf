@@ -1,26 +1,38 @@
 // app/api/availability/route.ts
-import { NextResponse } from 'next/server';
-import { format, parseISO, isValid, isBefore, startOfDay, addMonths } from 'date-fns';
-import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
+import { NextResponse } from "next/server";
+import {
+  format,
+  parseISO,
+  isValid,
+  isBefore,
+  startOfDay,
+  addMonths,
+} from "date-fns";
+import { prisma } from "@/lib/prisma";
+import { z } from "zod";
 
 // Validation plus stricte des créneaux horaires
-const TimeSlotSchema = z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/, {
-  message: "Le format de l'heure doit être HH:MM"
-}).refine((time) => {
-  const [hours, minutes] = time.split(':').map(Number);
-  return (
-    // Matin: 9h-12h
-    (hours >= 9 && hours < 12) ||
-    // Après-midi: 14h-21h
-    (hours >= 14 && hours <= 21)
-  ) && (minutes === 0 || minutes === 30);
-}, "Les créneaux doivent être entre 9h-12h ou 14h-21h, par tranches de 30 minutes");
+const TimeSlotSchema = z
+  .string()
+  .regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: "Le format de l'heure doit être HH:MM",
+  })
+  .refine((time) => {
+    const [hours, minutes] = time.split(":").map(Number);
+    return (
+      // Matin: 9h-12h
+      ((hours >= 9 && hours < 12) ||
+        // Après-midi: 14h-21h
+        (hours >= 14 && hours <= 21)) &&
+      (minutes === 0 || minutes === 30)
+    );
+  }, "Les créneaux doivent être entre 9h-12h ou 14h-21h, par tranches de 30 minutes");
 
 // Schéma de validation principal
 const AvailabilitySchema = z.object({
-  date: z.string()
-    .refine(val => {
+  date: z
+    .string()
+    .refine((val) => {
       try {
         const date = new Date(val);
         return isValid(date);
@@ -28,16 +40,17 @@ const AvailabilitySchema = z.object({
         return false;
       }
     }, "Format de date invalide")
-    .refine(val => {
+    .refine((val) => {
       const date = new Date(val);
       const today = startOfDay(new Date());
       const maxDate = addMonths(today, 2);
       return !isBefore(date, today) && !isBefore(maxDate, date);
     }, "La date doit être comprise entre aujourd'hui et dans 2 mois"),
-  
-  timeSlots: z.array(TimeSlotSchema)
+
+  timeSlots: z
+    .array(TimeSlotSchema)
     .min(1, "Au moins un créneau horaire doit être sélectionné")
-    .max(20, "Trop de créneaux sélectionnés")
+    .max(20, "Trop de créneaux sélectionnés"),
 });
 
 // Types
@@ -45,12 +58,11 @@ interface AvailabilityResponse {
   [date: string]: {
     timeSlots: string[];
     bookedSlots: string[];
-  }
+  };
 }
 
 // Helpers
-const formatDateResponse = (date: Date): string => 
-  format(date, 'yyyy-MM-dd');
+const formatDateResponse = (date: Date): string => format(date, "yyyy-MM-dd");
 
 const validateDateParam = (dateStr: string | null): Date | null => {
   if (!dateStr) return null;
@@ -62,19 +74,19 @@ const validateDateParam = (dateStr: string | null): Date | null => {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const start = validateDateParam(searchParams.get('start'));
-    const end = validateDateParam(searchParams.get('end'));
+    const start = validateDateParam(searchParams.get("start"));
+    const end = validateDateParam(searchParams.get("end"));
 
     if (!start || !end) {
       return NextResponse.json(
-        { error: 'Dates invalides ou manquantes' },
+        { error: "Dates invalides ou manquantes" },
         { status: 400 }
       );
     }
 
     if (isBefore(end, start)) {
       return NextResponse.json(
-        { error: 'La date de fin doit être après la date de début' },
+        { error: "La date de fin doit être après la date de début" },
         { status: 400 }
       );
     }
@@ -83,27 +95,27 @@ export async function GET(request: Request) {
       where: {
         date: {
           gte: start,
-          lte: end
-        }
+          lte: end,
+        },
       },
       orderBy: {
-        date: 'asc'
-      }
+        date: "asc",
+      },
     });
 
     const response: AvailabilityResponse = {};
     for (const availability of availabilities) {
       response[formatDateResponse(availability.date)] = {
         timeSlots: availability.timeSlots as string[],
-        bookedSlots: availability.bookedSlots as string[] || []
+        bookedSlots: (availability.bookedSlots as string[]) || [],
       };
     }
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Erreur:', error);
+    console.error("Erreur:", error);
     return NextResponse.json(
-      { error: 'Erreur lors de la récupération des disponibilités' },
+      { error: "Erreur lors de la récupération des disponibilités" },
       { status: 500 }
     );
   }
@@ -112,25 +124,27 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    
+
     // Validation des données
     const validationResult = await AvailabilitySchema.safeParseAsync(data);
-    
+
     if (!validationResult.success) {
-      return NextResponse.json({
-        error: 'Données invalides',
-        details: validationResult.error.issues
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Données invalides",
+          details: validationResult.error.issues,
+        },
+        { status: 400 }
+      );
     }
 
     const { date, timeSlots } = validationResult.data;
 
-    
     // Récupérons d'abord les bookedSlots existants si disponible
     const existingAvailability = await prisma.availability.findUnique({
       where: {
-        date: new Date(date)
-      }
+        date: new Date(date),
+      },
     });
 
     // Tri des créneaux pour assurer l'ordre
@@ -138,31 +152,30 @@ export async function POST(request: Request) {
 
     const availability = await prisma.availability.upsert({
       where: {
-        date: new Date(date)
+        date: new Date(date),
       },
       update: {
-        timeSlots: sortedTimeSlots
+        timeSlots: sortedTimeSlots,
       },
       create: {
         date: new Date(date),
         timeSlots: sortedTimeSlots,
-        bookedSlots: []
-      }
+        bookedSlots: [],
+      },
     });
-
 
     return NextResponse.json({
       success: true,
       data: {
         date: formatDateResponse(availability.date),
         timeSlots: availability.timeSlots,
-        bookedSlots: availability.bookedSlots
-      }
+        bookedSlots: availability.bookedSlots,
+      },
     });
-  }  catch (error) {
-    console.error('Erreur:', error);
+  } catch (error) {
+    console.error("Erreur:", error);
     return NextResponse.json(
-      { error: 'Erreur lors de la sauvegarde des disponibilités' },
+      { error: "Erreur lors de la sauvegarde des disponibilités" },
       { status: 500 }
     );
   }
@@ -171,29 +184,29 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const date = validateDateParam(searchParams.get('date'));
+    const date = validateDateParam(searchParams.get("date"));
 
     if (!date) {
       return NextResponse.json(
-        { error: 'Date invalide ou manquante' },
+        { error: "Date invalide ou manquante" },
         { status: 400 }
       );
     }
 
     await prisma.availability.delete({
       where: {
-        date: date
-      }
+        date: date,
+      },
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Disponibilités supprimées avec succès'
+      message: "Disponibilités supprimées avec succès",
     });
   } catch (error) {
-    console.error('Erreur:', error);
+    console.error("Erreur:", error);
     return NextResponse.json(
-      { error: 'Erreur lors de la suppression des disponibilités' },
+      { error: "Erreur lors de la suppression des disponibilités" },
       { status: 500 }
     );
   }
