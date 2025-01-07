@@ -1,7 +1,7 @@
-// app/dashboard/clients/[id]/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+// 1. Imports principaux
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,7 +11,7 @@ import * as z from "zod";
 import type { AppointmentStatus, QuoteStatus } from "@prisma/client";
 import { useCarQuery } from "@/lib/useCarQuery";
 
-// Composants UI
+// 2. Composants UI
 import {
   Dialog,
   DialogContent,
@@ -55,7 +55,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// Icônes
+// 3. Icônes
 import {
   Car,
   Calendar,
@@ -76,7 +76,7 @@ import {
   Clock,
 } from "lucide-react";
 
-// Interfaces
+// 4. Interfaces et Types
 interface InvoiceItem {
   description: string;
   quantity: number;
@@ -150,35 +150,28 @@ interface Client {
   appointments: Appointment[];
   documents: (Invoice | Quote)[];
 }
-
-// Schémas de validation
+// 5. Schémas de validation
 const clientSchema = z
   .object({
     type: z.enum(["individual", "company"]),
-    name: z.string().optional(),
-    firstName: z
-      .string()
-      .min(2, "Le prénom doit contenir au moins 2 caractères")
-      .optional(),
-    lastName: z
-      .string()
-      .min(2, "Le nom doit contenir au moins 2 caractères")
-      .optional(),
     email: z.string().email("L'email n'est pas valide"),
     phone: z.string().min(10, "Le numéro de téléphone n'est pas valide"),
     address: z.string().min(5, "L'adresse doit contenir au moins 5 caractères"),
-    siret: z.string().optional(),
-    vatNumber: z.string().optional(),
+    name: z.string().nullable(),
+    firstName: z.string().nullable(),
+    lastName: z.string().nullable(),
+    siret: z.string().nullable(),
+    vatNumber: z.string().nullable(),
   })
   .refine(
     (data) => {
       if (data.type === "company") {
-        return data.name && data.siret;
+        return data.name !== null;
       }
-      return data.firstName && data.lastName;
+      return data.firstName !== null && data.lastName !== null;
     },
     {
-      message: "Veuillez remplir tous les champs obligatoires",
+      message: "Les champs obligatoires doivent être remplis",
     }
   );
 
@@ -204,18 +197,17 @@ type ClientFormData = z.infer<typeof clientSchema>;
 type VehicleFormData = z.infer<typeof vehicleSchema>;
 
 export default function ClientDetailsPage() {
-  // Initialisation de useCarQuery en premier
+  // 6. Custom Hooks
   const {
     getMakes,
     getModels,
     getAvailableYears,
-    isLoading: isLoadingCar
+    isLoading: isLoadingCar,
   } = useCarQuery();
-
-  // Router et paramètres
   const router = useRouter();
   const params = useParams();
 
+  // 7. États
   // États principaux
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
@@ -232,286 +224,35 @@ export default function ClientDetailsPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // États pour les marques et modèles
+  // États pour les véhicules
   const [makes, setMakes] = useState<Array<any>>([]);
   const [models, setModels] = useState<Array<any>>([]);
-  const [years] = useState(getAvailableYears());
+  const [years] = useState(() => getAvailableYears());
 
-  // Formulaires
+  // 8. Forms
   const clientForm = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
-      type: "individual",
-      email: "",
-      phone: "",
-      address: "",
-    }
+      type: client?.type || "individual",
+    },
   });
 
   const vehicleForm = useForm<VehicleFormData>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
-      brand: '',
-      model: '',
+      brand: "",
+      model: "",
       year: new Date().getFullYear(),
-      type: '',
-      plate: '',
-      vin: '',
-    }
+      type: "",
+      plate: "",
+      vin: "",
+    },
   });
 
-  // useEffects pour les marques et modèles
-  useEffect(() => {
-    const loadMakes = async () => {
-      try {
-        const makesList = await getMakes();
-        setMakes(makesList);
-      } catch (error) {
-        console.error('Erreur lors du chargement des marques:', error);
-      }
-    };
-    loadMakes();
-  // Ajoutez un tableau de dépendances vide pour éviter les appels en boucle
-  }, []);
-
-  //chargement des modeles
-
-  useEffect(() => {
-    const loadModels = async () => {
-      const brand = vehicleForm.getValues('brand');
-      const year = vehicleForm.getValues('year');
-      
-      if (brand && year) {
-        try {
-          const modelsList = await getModels(brand, year);
-          setModels(modelsList);
-        } catch (error) {
-          console.error('Erreur chargement modèles:', error);
-        }
-      }
-    };
-    loadModels();
-  }, [vehicleForm.watch('brand'), vehicleForm.watch('year')]);
-
-  // Effet pour charger les données du client
-  useEffect(() => {
-    const fetchClientDetails = async () => {
-      try {
-        const response = await fetch(`/api/clients/${params.id}`);
-        if (!response.ok) throw new Error("Client non trouvé");
-        const data = await response.json();
-        setClient(data);
-        clientForm.reset({
-          type: data.type,
-          name: data.name,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          phone: data.phone,
-          address: data.address,
-          siret: data.siret,
-          vatNumber: data.vatNumber,
-        });
-      } catch (error) {
-        console.error("Erreur:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les informations du client",
-          variant: "destructive",
-        });
-        router.push("/dashboard/clients");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (params.id) {
-      fetchClientDetails();
-    }
-  }, [params.id, router, clientForm]);
-
-  
-
-  // Gestionnaires d'événements
-  const handleUpdateClient = async (data: ClientFormData) => {
-    try {
-      setIsSaving(true);
-      const response = await fetch(`/api/clients/${params.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...data,
-          vehicles: client?.vehicles
-        }),
-      });
-  
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-  
-      const updatedClient = await response.json();
-      setClient(updatedClient);
-      setIsEditing(false);
-      toast({
-        title: "Succès",
-        description: "Les informations ont été mises à jour",
-      });
-    } catch (error) {
-      console.error('Erreur:', error);
-      toast({
-        title: "Erreur",
-        description: "La mise à jour a échoué",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleAddVehicle = async (data: VehicleFormData) => {
-    try {
-      setIsSaving(true);
-      const response = await fetch(`/api/clients/${params.id}/vehicles`, {
-        method: selectedVehicle ? "PATCH" : "POST",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...data,
-          id: selectedVehicle?.id,
-        }),
-      });
-  
-      if (!response.ok) {
-        throw new Error('Échec de l\'opération');
-      }
-  
-      const updatedClient = await response.json();
-      setClient(updatedClient);
-      setShowVehicleForm(false);
-      setSelectedVehicle(null);
-      vehicleForm.reset();
-  
-      toast({
-        title: "Succès",
-        description: selectedVehicle 
-          ? "Le véhicule a été mis à jour" 
-          : "Le véhicule a été ajouté",
-      });
-    } catch (error) {
-      console.error('Erreur:', error);
-      toast({
-        title: "Erreur",
-        description: "Une erreur est survenue",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleDeleteVehicle = async (vehicleId: string) => {
-    try {
-      setIsDeleting(true);
-      const response = await fetch(
-        `/api/clients/${client?.id}/vehicles/${vehicleId}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) throw new Error("Échec de la suppression");
-
-      const updatedClient = await response.json();
-      setClient(updatedClient);
-      toast({
-        title: "Succès",
-        description: "Le véhicule a été supprimé",
-      });
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le véhicule",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleDeleteDocument = async (
-    documentId: string,
-    type: "invoice" | "quote"
-  ) => {
-    try {
-      setIsDeleting(true);
-      const response = await fetch(`/api/documents/${documentId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) throw new Error("Échec de la suppression");
-
-      setClient((prev) =>
-        prev
-          ? {
-              ...prev,
-              documents: prev.documents.filter((doc) => doc.id !== documentId),
-            }
-          : null
-      );
-
-      toast({
-        title: "Succès",
-        description: `Le document a été supprimé`,
-      });
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le document",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleDownloadDocument = async (
-    documentId: string,
-    type: "invoice" | "quote"
-  ) => {
-    try {
-      setIsDownloading(true);
-      const response = await fetch(
-        `/api/documents/${type}s/${documentId}/download`
-      );
-
-      if (!response.ok) throw new Error("Échec du téléchargement");
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${
-        type === "invoice" ? "facture" : "devis"
-      }-${documentId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de télécharger le document",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  // Fonctions utilitaires
+  // 9. Callbacks mémorisés pour les watches
+  const watchBrand = useCallback(() => vehicleForm.watch("brand"), [vehicleForm]);
+  const watchYear = useCallback(() => vehicleForm.watch("year"), [vehicleForm]);
+  // 10. Fonctions utilitaires
   const getPaymentStatusColor = (status: string) => {
     const colors = {
       draft: "bg-gray-500",
@@ -583,6 +324,294 @@ export default function ClientDetailsPage() {
     };
   };
 
+  // 11. Handlers
+  const handleUpdateClient = async (formData: ClientFormData) => {
+    if (!client) return;
+
+    try {
+      setIsSaving(true);
+      const updateData = {
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        type: client.type,
+        ...(client.type === "company"
+          ? {
+              name: formData.name,
+              siret: formData.siret || null,
+              vatNumber: formData.vatNumber || null,
+              firstName: null,
+              lastName: null,
+            }
+          : {
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              name: null,
+              siret: null,
+              vatNumber: null,
+            }),
+      };
+
+      const response = await fetch(`/api/clients/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const updatedClient = await response.json();
+      setClient(updatedClient);
+      setIsEditing(false);
+      toast({
+        title: "Succès",
+        description: "Les modifications ont été enregistrées avec succès",
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Une erreur est survenue lors de la mise à jour",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddVehicle = async (data: VehicleFormData) => {
+    try {
+      setIsSaving(true);
+      const response = await fetch(`/api/clients/${params.id}/vehicles`, {
+        method: selectedVehicle ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          id: selectedVehicle?.id,
+          vin: data.vin || null,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Échec de l'opération");
+
+      const updatedClient = await response.json();
+      setClient(updatedClient);
+      setShowVehicleForm(false);
+      setSelectedVehicle(null);
+      vehicleForm.reset();
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteVehicle = async (vehicleId: string) => {
+    if (!client) return;
+
+    try {
+      setIsDeleting(true);
+      const response = await fetch(
+        `/api/clients/${client.id}/vehicles/${vehicleId}`,
+        { method: "DELETE" }
+      );
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const updatedClient = await response.json();
+      setClient(updatedClient);
+      setIsConfirmingDelete(false);
+      setSelectedVehicle(null);
+      toast({
+        title: "Succès",
+        description: "Le véhicule a été supprimé",
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le véhicule",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  const handleDeleteDocument = async (
+    documentId: string,
+    type: "invoice" | "quote"
+  ) => {
+    try {
+      setIsDeleting(true);
+      const response = await fetch(`/api/documents/${documentId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) throw new Error("Échec de la suppression");
+
+      setClient((prev) =>
+        prev
+          ? {
+              ...prev,
+              documents: prev.documents.filter((doc) => doc.id !== documentId),
+            }
+          : null
+      );
+
+      toast({
+        title: "Succès",
+        description: "Le document a été supprimé",
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le document",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDownloadDocument = async (
+    documentId: string,
+    type: "invoice" | "quote"
+  ) => {
+    try {
+      setIsDownloading(true);
+      const response = await fetch(`/api/documents/${type}s/${documentId}/download`);
+
+      if (!response.ok) throw new Error("Échec du téléchargement");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${type === "invoice" ? "facture" : "devis"}-${documentId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le document",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // 12. useEffects
+  // Effet pour charger les marques
+  useEffect(() => {
+    if (makes.length === 0) {
+      const loadMakes = async () => {
+        try {
+          const makesList = await getMakes();
+          setMakes(makesList);
+        } catch (error) {
+          console.error("Erreur lors du chargement des marques:", error);
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger les marques de véhicules",
+            variant: "destructive",
+          });
+        }
+      };
+      loadMakes();
+    }
+  }, [getMakes]); // Retiré makes.length des dépendances
+
+  // Effet pour charger les modèles
+  useEffect(() => {
+    const brand = watchBrand();
+    const year = watchYear();
+
+    if (brand && year) {
+      const loadModels = async () => {
+        try {
+          const modelsList = await getModels(brand, year);
+          setModels(modelsList);
+        } catch (error) {
+          console.error("Erreur chargement modèles:", error);
+        }
+      };
+      loadModels();
+    } else {
+      setModels([]);
+    }
+  }, [watchBrand, watchYear, getModels]);
+
+  // Effet pour gérer le formulaire véhicule
+  useEffect(() => {
+    if (showVehicleForm) {
+      if (selectedVehicle) {
+        vehicleForm.reset({
+          brand: selectedVehicle.brand,
+          model: selectedVehicle.model,
+          year: selectedVehicle.year,
+          type: selectedVehicle.type,
+          plate: selectedVehicle.plate,
+          vin: selectedVehicle.vin || "",
+        });
+      } else {
+        vehicleForm.reset({
+          brand: "",
+          model: "",
+          year: new Date().getFullYear(),
+          type: "",
+          plate: "",
+          vin: "",
+        });
+        setModels([]);
+      }
+    }
+  }, [showVehicleForm, selectedVehicle]); // Retiré vehicleForm des dépendances
+
+  // Effet pour charger les données du client
+  useEffect(() => {
+    if (!client && params.id) {
+      const fetchClientDetails = async () => {
+        try {
+          const response = await fetch(`/api/clients/${params.id}`);
+          if (!response.ok) throw new Error("Client non trouvé");
+          const data = await response.json();
+          setClient(data);
+          clientForm.reset({
+            type: data.type,
+            name: data.name,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            phone: data.phone,
+            address: data.address,
+            siret: data.siret,
+            vatNumber: data.vatNumber,
+          });
+        } catch (error) {
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger les informations du client",
+            variant: "destructive",
+          });
+          router.push("/dashboard/clients");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchClientDetails();
+    }
+  }, [params.id, router, client]);
+
   // État de chargement
   if (loading || !client) {
     return (
@@ -635,7 +664,7 @@ export default function ClientDetailsPage() {
             <Button
               variant="outline"
               onClick={() => setIsEditing(true)}
-              className="w-full md:w-auto justify-center"
+              className="w-full md:w-auto justify-center text-black"
             >
               <Edit className="h-4 w-4 mr-2" />
               Modifier
@@ -1255,12 +1284,35 @@ export default function ClientDetailsPage() {
                 Modifiez les informations de {displayName}
               </DialogDescription>
             </DialogHeader>
+
+            {/* Important: Nous devons garder le composant Form pour fournir le contexte */}
             <Form {...clientForm}>
+              {/* Le form HTML va à l'intérieur du composant Form de shadcn */}
               <form
-                onSubmit={clientForm.handleSubmit(handleUpdateClient)}
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  console.log("1. Début de la soumission");
+
+                  const values = clientForm.getValues();
+                  console.log("2. Valeurs du formulaire:", values);
+
+                  const isValid = await clientForm.trigger();
+                  console.log("3. Formulaire valide ?", isValid);
+
+                  if (!isValid) {
+                    console.log(
+                      "4a. Erreurs de validation:",
+                      clientForm.formState.errors
+                    );
+                    return;
+                  }
+
+                  console.log("4b. Appel de handleUpdateClient");
+                  await handleUpdateClient(values);
+                }}
                 className="space-y-6"
               >
-                {/* Type de client (non modifiable) */}
+                {/* Type de client */}
                 <div className="space-y-2">
                   <Label className="text-sm text-muted-foreground">
                     Type de client
@@ -1292,6 +1344,7 @@ export default function ClientDetailsPage() {
                           <FormControl>
                             <Input
                               {...field}
+                              value={field.value || ""}
                               placeholder="Nom de l'entreprise"
                             />
                           </FormControl>
@@ -1306,7 +1359,7 @@ export default function ClientDetailsPage() {
                         <FormItem>
                           <FormLabel>SIRET</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="123 456 789 00012" />
+                            <Input {...field} value={field.value || ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1322,7 +1375,11 @@ export default function ClientDetailsPage() {
                         <FormItem>
                           <FormLabel>Prénom</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Prénom" />
+                            <Input
+                              {...field}
+                              value={field.value || ""}
+                              placeholder="Prénom"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1335,7 +1392,11 @@ export default function ClientDetailsPage() {
                         <FormItem>
                           <FormLabel>Nom</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Nom" />
+                            <Input
+                              {...field}
+                              value={field.value || ""}
+                              placeholder="Nom"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1398,15 +1459,19 @@ export default function ClientDetailsPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setIsEditing(false)}
-                    disabled={isSaving}
                   >
                     Annuler
                   </Button>
-                  <Button type="submit" disabled={isSaving}>
+                  <Button
+                    type="submit"
+                    disabled={isSaving}
+                    variant="default" // Utilisation du variant par défaut
+                    className="bg-black text-white hover:bg-black/90"
+                  >
                     {isSaving ? (
                       <>
                         <LoadingSpinner />
-                        Enregistrement...
+                        <span className="ml-2">Enregistrement...</span>
                       </>
                     ) : (
                       "Enregistrer les modifications"
@@ -1419,7 +1484,6 @@ export default function ClientDetailsPage() {
         </Dialog>
 
         {/* Modal de gestion des véhicules */}
-        {/* Modal de gestion des véhicules */}
         <Dialog open={showVehicleForm} onOpenChange={setShowVehicleForm}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
@@ -1429,10 +1493,10 @@ export default function ClientDetailsPage() {
                   : "Ajouter un véhicule"}
               </DialogTitle>
               <DialogDescription>
-      {selectedVehicle 
-        ? "Modifiez les informations du véhicule" 
-        : "Ajoutez un nouveau véhicule"}
-    </DialogDescription>
+                {selectedVehicle
+                  ? "Modifiez les informations du véhicule"
+                  : "Ajoutez un nouveau véhicule"}
+              </DialogDescription>
             </DialogHeader>
             <Form {...vehicleForm}>
               <form
@@ -1451,10 +1515,15 @@ export default function ClientDetailsPage() {
                           {...field}
                           onChange={(e) => {
                             field.onChange(e);
-                            vehicleForm.setValue("model", ""); // Reset model when brand changes
+                            vehicleForm.setValue("model", "");
                           }}
+                          disabled={isLoadingCar}
                         >
-                          <option value="">Sélectionnez une marque</option>
+                          <option value="">
+                            {isLoadingCar
+                              ? "Chargement..."
+                              : "Sélectionnez une marque"}
+                          </option>
                           {makes.map((make) => (
                             <option key={make.make_id} value={make.make_id}>
                               {make.make_display}
@@ -1598,90 +1667,134 @@ export default function ClientDetailsPage() {
             </Form>
           </DialogContent>
         </Dialog>
+        {/*Modal de suppression */}
         {/*Modal de suppression Vehicules */}
-        {/* Modal de confirmation de suppression de véhicule */}
         <AlertDialog
           open={isConfirmingDelete}
           onOpenChange={setIsConfirmingDelete}
         >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-              <AlertDialogDescription>
+          <AlertDialogContent className="sm:max-w-[425px] gap-6 p-6">
+            <AlertDialogHeader className="space-y-3">
+              <AlertDialogTitle className="text-xl font-semibold">
+                Confirmer la suppression
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-base text-muted-foreground">
                 Êtes-vous sûr de vouloir supprimer ce véhicule ? Cette action
                 est irréversible.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>
+            <AlertDialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+              <AlertDialogCancel
+                disabled={isDeleting}
+                className="mt-2 sm:mt-0 w-full sm:w-auto bg-black hover:bg-black/90 text-white"
+              >
                 Annuler
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={async () => {
-                  if (selectedVehicle) {
-                    await handleDeleteVehicle(selectedVehicle.id);
+                  if (!selectedVehicle || !client) return;
+
+                  try {
+                    setIsDeleting(true);
+                    const response = await fetch(
+                      `/api/clients/${client.id}/vehicles/${selectedVehicle.id}`,
+                      {
+                        method: "DELETE",
+                      }
+                    );
+
+                    if (!response.ok) {
+                      throw new Error("Échec de la suppression");
+                    }
+
+                    const updatedClient = await response.json();
+                    setClient(updatedClient);
+
                     setIsConfirmingDelete(false);
                     setSelectedVehicle(null);
+
+                    toast({
+                      title: "Succès",
+                      description: "Le véhicule a été supprimé",
+                    });
+                  } catch (error) {
+                    console.error("Erreur lors de la suppression:", error);
+                    toast({
+                      title: "Erreur",
+                      description: "Impossible de supprimer le véhicule",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setIsDeleting(false);
                   }
                 }}
                 disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
               >
                 {isDeleting ? (
                   <>
                     <LoadingSpinner />
-                    Suppression...
+                    <span>Suppression...</span>
                   </>
                 ) : (
-                  "Supprimer"
+                  "Confirmer la suppression"
                 )}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        {/* Modal de confirmation de suppression */}
-        <AlertDialog
-          open={isConfirmingDelete}
-          onOpenChange={setIsConfirmingDelete}
+
+        {/*Details rdv */}
+        <Dialog
+          open={showAppointmentDetails}
+          onOpenChange={setShowAppointmentDetails}
         >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-              <AlertDialogDescription>
-                Êtes-vous sûr de vouloir supprimer cet élément ? Cette action
-                est irréversible.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>
-                Annuler
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={async () => {
-                  if (selectedDocument) {
-                    await handleDeleteDocument(
-                      selectedDocument.id,
-                      selectedDocument.type
-                    );
-                    setIsConfirmingDelete(false);
-                    setSelectedDocument(null);
-                  }
-                }}
-                disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {isDeleting ? (
-                  <>
-                    <LoadingSpinner />
-                    Suppression...
-                  </>
-                ) : (
-                  "Supprimer"
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Détails du rendez-vous</DialogTitle>
+            </DialogHeader>
+            {selectedAppointment && (
+              <div className="space-y-4">
+                <div className="grid gap-2">
+                  <Label>Date</Label>
+                  <div>
+                    {format(
+                      parseISO(selectedAppointment.requestedDate),
+                      "PPP à HH:mm",
+                      { locale: fr }
+                    )}
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Véhicule</Label>
+                  <div>
+                    {selectedAppointment.vehicle.brand}{" "}
+                    {selectedAppointment.vehicle.model}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {selectedAppointment.vehicle.plate}
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Service</Label>
+                  <div>{selectedAppointment.service}</div>
+                </div>
+                {selectedAppointment.description && (
+                  <div className="grid gap-2">
+                    <Label>Description</Label>
+                    <div>{selectedAppointment.description}</div>
+                  </div>
                 )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                <div className="grid gap-2">
+                  <Label>Statut</Label>
+                  <div>
+                    {getAppointmentStatusBadge(selectedAppointment.status)}
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

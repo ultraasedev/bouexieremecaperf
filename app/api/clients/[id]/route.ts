@@ -28,6 +28,25 @@ interface UpdateClientRequest {
   type?: 'individual' | 'company';
   vehicles?: VehicleUpdateData[];
 }
+interface TransformedClient {
+  id: string;
+  type: string;
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  siret: string | null;
+  vatNumber: string | null;
+  email: string;
+  phone: string;
+  address: string;
+  createdAt: Date;
+  updatedAt: Date;
+  vehicles: any[];
+  appointments: any[];
+  invoices: any[];
+  quotes: any[];
+  documents: any[];
+}
 
 /**
  * Fonctions utilitaires
@@ -189,155 +208,45 @@ export async function GET(
 /**
  * PATCH - Met à jour les informations d'un client
  */
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
-    const data = await request.json() as UpdateClientRequest;
-
-    // Vérification de l'existence du client
-    const existingClient = await prisma.client.findUnique({
-      where: { id: params.id }
-    });
-
-    if (!existingClient) {
-      return NextResponse.json(
-        { error: 'Client non trouvé' },
-        { status: 404 }
-      );
-    }
-
-    // Vérification de l'unicité de l'email si modifié
-    if (data.email && data.email !== existingClient.email) {
-      const emailExists = await prisma.client.findFirst({
-        where: {
-          email: data.email,
-          NOT: { id: params.id }
-        }
-      });
-
-      if (emailExists) {
-        return NextResponse.json(
-          { error: 'Cet email est déjà utilisé par un autre client' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Vérification de l'unicité du SIRET pour les entreprises
-    if (
-      existingClient.type === 'company' &&
-      data.siret &&
-      data.siret !== existingClient.siret
-    ) {
-      const siretExists = await prisma.client.findFirst({
-        where: {
-          siret: data.siret,
-          type: 'company',
-          NOT: { id: params.id }
-        }
-      });
-
-      if (siretExists) {
-        return NextResponse.json(
-          { error: 'Ce SIRET est déjà utilisé par une autre entreprise' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Gestion des véhicules
-    if (data.vehicles) {
-      try {
-        // Vérification des contraintes pour tous les véhicules
-        await Promise.all(
-          data.vehicles.map(vehicle => 
-            checkVehicleConstraints(vehicle, params.id, vehicle.id)
-          )
-        );
-
-        // Supprimer les véhicules qui ne sont plus dans la liste
-        await prisma.vehicle.deleteMany({
-          where: {
-            AND: [
-              { clientId: params.id },
-              { 
-                id: { 
-                  notIn: data.vehicles
-                    .filter((v: VehicleUpdateData) => v.id)
-                    .map((v: VehicleUpdateData) => v.id as string) 
-                } 
-              }
-            ]
-          }
-        });
-
-        // Mettre à jour ou créer les véhicules
-        for (const vehicle of data.vehicles) {
-          if (vehicle.id) {
-            await prisma.vehicle.update({
-              where: { id: vehicle.id },
-              data: {
-                brand: vehicle.brand,
-                model: vehicle.model,
-                year: vehicle.year,
-                type: vehicle.type,
-                plate: vehicle.plate,
-                vin: vehicle.vin
-              }
-            });
-          } else {
-            await prisma.vehicle.create({
-              data: {
-                ...vehicle,
-                clientId: params.id
-              }
-            });
-          }
-        }
-      } catch (error) {
-        return NextResponse.json(
-          { error: error instanceof Error ? error.message : 'Erreur lors de la mise à jour des véhicules' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Mise à jour du client
+    const data = await request.json();
+    
     const updatedClient = await prisma.client.update({
       where: { id: params.id },
       data: {
         email: data.email,
         phone: data.phone,
         address: data.address,
-        name: data.name,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        siret: data.siret,
-        vatNumber: data.vatNumber
+        name: data.type === 'company' ? data.name : null,
+        firstName: data.type === 'individual' ? data.firstName : null,
+        lastName: data.type === 'individual' ? data.lastName : null,
+        siret: data.type === 'company' ? data.siret : null,
+        vatNumber: data.type === 'company' ? data.vatNumber : null,
+        type: data.type 
       },
       include: {
-        vehicles: {
-          orderBy: {
-            createdAt: 'desc'
+        vehicles: true,
+        appointments: {
+          select: {
+            id: true,
+            service: true,
+            vehicle: true,
+            description: true,
+            requestedDate: true,
+            status: true,
+            createdAt: true,
+            token: true
           }
         },
-        appointments: true,
         invoices: true,
         quotes: true
       }
     });
 
-    // Transformation des données comme dans le GET
+    // Transformer le client comme dans la route GET
     const transformedClient = {
       ...updatedClient,
-      appointments: updatedClient.appointments.map(appointment => ({
-        ...appointment,
-        vehicle: typeof appointment.vehicle === 'string'
-          ? JSON.parse(appointment.vehicle)
-          : appointment.vehicle
-      })),
       documents: [
         ...updatedClient.invoices.map(invoice => ({
           id: invoice.id,
@@ -357,21 +266,13 @@ export async function PATCH(
           status: quote.status,
           createdAt: quote.createdAt
         }))
-      ].sort((a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      ),
-      fullName: updatedClient.type === 'company'
-        ? updatedClient.name
-        : `${updatedClient.firstName} ${updatedClient.lastName}`.trim()
+      ]
     };
 
     return NextResponse.json(transformedClient);
   } catch (error) {
-    console.error('Error updating client:', error);
-    return NextResponse.json(
-      { error: 'Erreur lors de la mise à jour du client' },
-      { status: 500 }
-    );
+    console.error('Error:', error);
+    return NextResponse.json({ error: 'Mise à jour échouée' }, { status: 500 });
   }
 }
 /**
