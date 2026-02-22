@@ -2,11 +2,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ClientType } from '@/types/clients';
+import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    await requireAdmin();
+
     const clients = await prisma.client.findMany({
       select: {
         id: true,
@@ -44,7 +47,9 @@ export async function GET() {
         invoices: {
           select: {
             id: true,
-            amount: true,
+            number: true,
+            totalHT: true,
+            totalTTC: true,
             status: true,
             dueDate: true,
             items: true,
@@ -71,6 +76,8 @@ export async function GET() {
 
     return NextResponse.json(clients);
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Error fetching clients:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la récupération des clients' },
@@ -81,6 +88,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    await requireAdmin();
     const data = await request.json();
 
     // Validation des données communes requises
@@ -171,9 +179,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json(newClient, { status: 201 });
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Error creating client:', error);
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Erreur lors de la création du client'
       },
       { status: 500 }

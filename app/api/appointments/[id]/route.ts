@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendAppointmentEmail } from '@/lib/email';
 import { AppointmentStatus, AppointmentEmailData } from '@/types/appoitement';
+import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
+import { updateAppointmentSchema } from '@/lib/validations';
 
 // Helper pour formater la date
 const formatDateForEmail = (date: Date): string => {
@@ -47,8 +49,18 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const data = await request.json();
-    const { requestedDate, status } = data;
+    await requireAdmin();
+    const rawData = await request.json();
+
+    const validation = updateAppointmentSchema.safeParse(rawData);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Données invalides', details: validation.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const { requestedDate, status } = validation.data;
 
     const appointment = await prisma.appointment.update({
       where: { id: params.id },
@@ -86,6 +98,8 @@ export async function PATCH(
 
     return NextResponse.json(appointment);
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Erreur:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la modification du rendez-vous' },
@@ -99,6 +113,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    await requireAdmin();
+
     const appointment = await prisma.appointment.update({
       where: { id: params.id },
       data: { 
@@ -132,6 +148,8 @@ export async function DELETE(
 
     return NextResponse.json(appointment);
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Erreur:', error);
     return NextResponse.json(
       { error: 'Erreur lors de l\'annulation du rendez-vous' },

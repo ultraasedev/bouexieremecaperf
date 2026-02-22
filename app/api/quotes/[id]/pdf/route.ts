@@ -3,12 +3,14 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generatePDF } from '@/lib/generatePDF';
 import { transformPrismaQuoteToQuote } from '@/lib/utils';
+import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    await requireAdmin();
     const { id } = params;
 
     const quote = await prisma.quote.findUnique({
@@ -36,6 +38,8 @@ export async function GET(
     });
 
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Erreur lors de la génération du PDF:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la génération du PDF' },

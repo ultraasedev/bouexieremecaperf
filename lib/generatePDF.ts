@@ -2,13 +2,14 @@
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { Quote } from '@/types/quote';
+import { prisma } from '@/lib/prisma';
 
 export async function generatePDF(quote: Quote): Promise<Buffer> {
-  // Créer un nouveau document PDF
   const doc = new jsPDF();
-
-  // Configuration des polices
   doc.setFont('helvetica');
+
+  // Récupérer les paramètres entreprise
+  const company = await prisma.companySettings.findFirst();
 
   // En-tête
   doc.setFontSize(20);
@@ -18,14 +19,18 @@ export async function generatePDF(quote: Quote): Promise<Buffer> {
   doc.text(`N° ${quote.number}`, 150, 30, { align: 'right' });
   doc.text(`Date : ${new Date(quote.date).toLocaleDateString('fr-FR')}`, 150, 40, { align: 'right' });
 
-  // Informations société
+  // Informations société (dynamique depuis CompanySettings)
   doc.setFontSize(14);
-  doc.text('Bouexiere Meca Performance', 20, 20);
+  doc.text(company?.companyName || 'Bouëxière Méca Performance', 20, 20);
   doc.setFontSize(10);
-  doc.text('1 rue de la Mécanique', 20, 30);
-  doc.text('35340 La Bouexière', 20, 35);
-  doc.text('Tél : 02.99.XX.XX.XX', 20, 40);
-  doc.text('Email : contact@bmp.fr', 20, 45);
+  if (company) {
+    doc.text(company.address, 20, 30);
+    doc.text(`Tél : ${company.phone}`, 20, 35);
+    doc.text(`Email : ${company.email}`, 20, 40);
+    doc.text(`SIRET : ${company.siret}`, 20, 45);
+  } else {
+    doc.text('Paramètres entreprise non configurés', 20, 30);
+  }
 
   // Informations client
   doc.setFontSize(12);
@@ -47,15 +52,15 @@ export async function generatePDF(quote: Quote): Promise<Buffer> {
     item.quantity.toString(),
     `${item.unitPriceHT.toFixed(2)} €`,
     `${item.vatRate}%`,
-    item.discount 
-      ? (item.discount.type === 'percentage' 
-        ? `${item.discount.value}%` 
+    item.discount
+      ? (item.discount.type === 'percentage'
+        ? `${item.discount.value}%`
         : `${item.discount.value.toFixed(2)} €`)
       : '-',
     `${item.totalHT.toFixed(2)} €`
   ]);
 
-  (doc as any).autoTable({
+  (doc as unknown as { autoTable: (opts: unknown) => void }).autoTable({
     startY: 95,
     head: [['Description', 'Quantité', 'Prix U. HT', 'TVA', 'Remise', 'Total HT']],
     body: tableData,
@@ -65,19 +70,19 @@ export async function generatePDF(quote: Quote): Promise<Buffer> {
   });
 
   // Totaux
-  const finalY = (doc as any).previousAutoTable.finalY + 10;
-  
+  const finalY = (doc as unknown as { previousAutoTable: { finalY: number } }).previousAutoTable.finalY + 10;
+
   doc.text('Total HT :', 120, finalY);
   doc.text(`${quote.totalHT.toFixed(2)} €`, 170, finalY, { align: 'right' });
-  
+
   if (quote.totalRemise > 0) {
     doc.text('Remise :', 120, finalY + 5);
     doc.text(`${quote.totalRemise.toFixed(2)} €`, 170, finalY + 5, { align: 'right' });
   }
-  
+
   doc.text('TVA :', 120, finalY + 10);
   doc.text(`${quote.totalVAT.toFixed(2)} €`, 170, finalY + 10, { align: 'right' });
-  
+
   doc.setFontSize(12);
   doc.text('Total TTC :', 120, finalY + 20);
   doc.text(`${quote.totalTTC.toFixed(2)} €`, 170, finalY + 20, { align: 'right' });
@@ -95,12 +100,13 @@ export async function generatePDF(quote: Quote): Promise<Buffer> {
   );
 
   // Mentions légales
+  const vatRegime = company?.vatRegime || 'TVA non applicable, art. 293 B du CGI';
+  const legalForm = company?.legalForm || 'Auto-entrepreneur';
+
   doc.setFontSize(8);
-  doc.text('TVA non applicable, art. 293 B du CGI', 20, finalY + 60);
-  doc.text('Auto-entrepreneur - Dispensé d\'immatriculation au RCS et au RM', 20, finalY + 65);
+  doc.text(vatRegime, 20, finalY + 60);
+  doc.text(`${legalForm} - Dispensé d'immatriculation au RCS et au RM`, 20, finalY + 65);
   doc.text('En cas d\'acceptation, merci de retourner ce devis signé avec la mention "Bon pour accord"', 20, finalY + 70);
 
-  // Convertir en Buffer
-  const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
-  return pdfBuffer;
+  return Buffer.from(doc.output('arraybuffer'));
 }

@@ -7,9 +7,13 @@ import { SignJWT, jwtVerify } from 'jose';
 import type { UserPayload, JWTPayload } from '@/types/auth';
 
 // Configuration constantes
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'votre-secret-tres-securise'
-);
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is not set');
+  }
+  return new TextEncoder().encode(secret);
+};
 
 const COOKIE_OPTIONS = {
   name: 'auth_token',
@@ -26,7 +30,7 @@ const createJWT = async (payload: JWTPayload) => {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('24h')
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 };
 
 const createAuthResponse = (user: UserPayload, token: string) => {
@@ -145,7 +149,7 @@ export async function GET() {
     }
 
     // Vérification du token
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     
     // Construction du payload utilisateur
     const userData: UserPayload = {

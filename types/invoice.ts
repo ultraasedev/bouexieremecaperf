@@ -1,290 +1,197 @@
 import * as z from 'zod';
 import { ClientInfo, QuoteItem, PaymentDetails } from './quote';
 
-// Statut possible d'une facture
-export type InvoiceStatus = 
-  | 'draft'      // Brouillon
-  | 'sent'       // Envoyée
-  | 'paid'       // Payée
-  | 'partial'    // Partiellement payée
-  | 'overdue'    // En retard
-  | 'cancelled'; // Annulée
+// Statut possible d'une facture (aligné avec Prisma enum InvoiceStatus)
+export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PAID' | 'PARTIAL' | 'OVERDUE' | 'CANCELLED';
 
-// Méthode de paiement
-export type PaymentMethod = 
-  | 'cash'           // Espèces
-  | 'check'          // Chèque
-  | 'transfer'       // Virement
-  | 'card'           // Carte bancaire
-  | 'direct_debit';  // Prélèvement
+// Méthode de paiement (aligné avec Prisma enum PaymentMethod)
+export type PaymentMethod = 'CASH' | 'CHECK' | 'TRANSFER' | 'CARD' | 'DIRECT_DEBIT';
+
+// Mentions légales obligatoires
+export interface LegalNotices {
+  generalConditions: string;
+  paymentPenalties: string;
+  recoveryIndemnity: string;
+  vatRegime: string;
+}
 
 // Détails du paiement pour une facture
 export interface InvoicePaymentDetails extends PaymentDetails {
   paymentMethod?: PaymentMethod;
-  paymentDueDate: Date;        // Date d'échéance
+  paymentDueDate?: string;       // Date d'échéance
   earlyPaymentDiscount?: number; // Escompte pour paiement anticipé
+}
+
+// Paiement enregistré
+export interface InvoicePayment {
+  id: string;
+  invoiceId: string;
+  amount: number;
+  method: PaymentMethod;
+  date: string;
+  reference?: string;
+  notes?: string;
+  createdAt: string;
 }
 
 // Structure complète d'une facture
 export interface Invoice {
   id: string;
-  number: string;                // Numéro de facture (séquentiel et inaltérable)
-  date: Date;                    // Date d'émission
-  clientInfo: ClientInfo;        // Informations client
-  items: QuoteItem[];          // Lignes de facture
+  number: string;                // Numéro de facture (séquentiel FA2026-000001)
+  date: string;                  // Date d'émission
+  dueDate: string;               // Date d'échéance
+  clientId: string;
+  clientInfo: ClientInfo;        // Snapshot infos client
+  items: QuoteItem[];            // Lignes de facture
   paymentDetails: InvoicePaymentDetails;
-  
-  // Montants
-  totalHT: number;               // Total HT
-  totalVAT: number;              // Total TVA
-  totalTTC: number;              // Total TTC
-  totalDiscount: number;         // Total des remises
-  
-  // Informations de statut et de suivi
-  status: InvoiceStatus;
-  quoteRef?: string;            // Référence au devis si applicable
-  consultedAt?: Date;           // Date de consultation par le client
-  paidAt?: Date;                // Date de paiement
-  
-  // Mentions légales obligatoires
-  legalNotices: {
-    generalConditions: string;   // Conditions générales de vente
-    paymentPenalties: string;    // Mentions sur les pénalités de retard
-    recoveryIndemnity: string;   // Indemnité forfaitaire de recouvrement
-    vatRegime: string;          // Régime de TVA applicable
-  };
-  
-  // Paramètres financiers
-  penaltyRate: number;          // Taux des pénalités de retard
-  recoveryIndemnityAmount: number; // Montant de l'indemnité forfaitaire (40€)
-  earlyPaymentDiscountRate?: number; // Taux d'escompte
 
-  notes?: string;               // Notes additionnelles
-  internalNotes?: string;       // Notes internes (non visibles sur la facture)
-  
-  // Suivi des modifications
-  createdAt: Date;
-  updatedAt: Date;
-  cancelledAt?: Date;
+  // Montants
+  totalHT: number;
+  totalVAT: number;
+  totalTTC: number;
+  totalDiscount: number;
+
+  // Statut et suivi
+  status: InvoiceStatus;
+  quoteId?: string;              // Référence au devis source
+  appointmentId?: string;
+
+  // Mentions légales obligatoires
+  legalNotices: LegalNotices;
+
+  // Paramètres financiers (loi française)
+  penaltyRate: number;             // Taux pénalités de retard (10.40%)
+  recoveryIndemnityAmount: number; // Indemnité forfaitaire (40€)
+
+  // Notes
+  notes?: string;
+  internalNotes?: string;
+
+  // Dates de suivi
+  sentAt?: string;
+  paidAt?: string;
+  cancelledAt?: string;
   cancellationReason?: string;
+
+  // Paiements
+  payments?: InvoicePayment[];
+
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Constantes légales et réglementaires
 export const INVOICE_CONSTANTS = {
   // Mentions légales obligatoires
   LEGAL_NOTICES: {
-    RECOVERY_INDEMNITY_AMOUNT: 40, // 40€ d'indemnité forfaitaire
-    DEFAULT_PENALTY_RATE: 10.40,    // Taux des pénalités de retard (3 fois le taux légal)
-    PAYMENT_DELAY_MAX: 60,          // Délai maximum de paiement en jours
-    
-    // Templates des mentions légales
-    AUTO_ENTREPRENEUR: `
-      Auto-entrepreneur
-      Dispensé d'immatriculation au registre du commerce et des sociétés (RCS) 
-      et au répertoire des métiers (RM)
-    `,
-    
-    VAT_MENTION: `
-      TVA non applicable, art. 293 B du CGI
-    `,
-    
-    PENALTY_MENTION: (rate: number) => `
-      En cas de retard de paiement, une pénalité de ${rate}% du montant de la facture sera exigible.
-      Une indemnité forfaitaire de recouvrement de 40€ sera également due.
-    `,
-    
-    EARLY_PAYMENT_MENTION: (rate: number) => `
-      Escompte de ${rate}% pour paiement anticipé.
-    `
+    RECOVERY_INDEMNITY_AMOUNT: 40,
+    DEFAULT_PENALTY_RATE: 10.40,
+    PAYMENT_DELAY_MAX: 60,
+
+    AUTO_ENTREPRENEUR: 'Auto-entrepreneur - Dispensé d\'immatriculation au registre du commerce et des sociétés (RCS) et au répertoire des métiers (RM)',
+
+    VAT_MENTION: 'TVA non applicable, art. 293 B du CGI',
+
+    PENALTY_MENTION: (rate: number) =>
+      `En cas de retard de paiement, une pénalité de ${rate}% du montant de la facture sera exigible. Une indemnité forfaitaire de recouvrement de 40€ sera également due.`,
+
+    EARLY_PAYMENT_MENTION: (rate: number) =>
+      `Escompte de ${rate}% pour paiement anticipé.`,
   },
 
-  // Numérotation des factures
-  INVOICE_NUMBER_PREFIX: 'FA',     // Préfixe pour les numéros de facture
-  INVOICE_NUMBER_LENGTH: 8,        // Longueur totale du numéro (ex: FA000001)
+  INVOICE_NUMBER_PREFIX: 'FA',
+  QUOTE_NUMBER_PREFIX: 'DEV',
 
-  // Options de paiement
   PAYMENT_METHODS: {
-    cash: 'Espèces',
-    check: 'Chèque',
-    transfer: 'Virement bancaire',
-    card: 'Carte bancaire',
-    direct_debit: 'Prélèvement'
-  },
-
-  // Statuts et leurs libellés
-  STATUS_LABELS: {
-    draft: 'Brouillon',
-    sent: 'Envoyée',
-    paid: 'Payée',
-    partial: 'Partiellement payée',
-    overdue: 'En retard',
-    cancelled: 'Annulée'
+    CASH: 'Espèces',
+    CHECK: 'Chèque',
+    TRANSFER: 'Virement bancaire',
+    CARD: 'Carte bancaire',
+    DIRECT_DEBIT: 'Prélèvement',
   } as const,
 
-  // Validation des montants
+  STATUS_LABELS: {
+    DRAFT: 'Brouillon',
+    SENT: 'Envoyée',
+    PAID: 'Payée',
+    PARTIAL: 'Partiellement payée',
+    OVERDUE: 'En retard',
+    CANCELLED: 'Annulée',
+  } as const,
+
   AMOUNT_LIMITS: {
-    MAX_AMOUNT: 1000000,           // Montant maximum par ligne
-    MIN_AMOUNT: 0,                 // Montant minimum
-    DECIMAL_PLACES: 2              // Nombre de décimales autorisées
-  }
+    MAX_AMOUNT: 1000000,
+    MIN_AMOUNT: 0,
+    DECIMAL_PLACES: 2,
+  },
 };
 
-// Schéma de validation Zod pour les factures
-export const invoiceSchema = z.object({
-    // Informations générales
-    number: z.string().min(1, "Le numéro de facture est requis"),
-    date: z.date({
-      required_error: "La date de facture est requise",
-      invalid_type_error: "Format de date invalide",
-    }),
-  
-    // Informations client (réutilisation du schéma client des devis)
-    clientInfo: z.object({
-      type: z.enum(['individual', 'company'], {
-        required_error: "Le type de client est requis",
-      }),
-      individual: z.object({
-        firstName: z.string().min(2, "Le prénom est requis"),
-        lastName: z.string().min(2, "Le nom est requis"),
+// Schéma de validation Zod pour la création de facture (API)
+export const createInvoiceSchema = z.object({
+  clientId: z.string().min(1, 'Client requis'),
+  date: z.string().or(z.date()),
+  dueDate: z.string().or(z.date()),
+  items: z.array(
+    z.object({
+      description: z.string().min(1, 'Description requise'),
+      quantity: z.number().positive('La quantité doit être positive'),
+      unitPriceHT: z.number().nonnegative('Le prix doit être positif ou nul'),
+      vatRate: z.number().min(0).max(100),
+      discount: z.object({
+        type: z.enum(['percentage', 'fixed']).optional(),
+        value: z.number().min(0).optional(),
       }).optional(),
-      company: z.object({
-        name: z.string().min(2, "Le nom de l'entreprise est requis"),
-        siret: z.string().regex(/^\d{14}$/, "Le numéro SIRET doit contenir 14 chiffres"),
-        vatNumber: z.string().optional(),
-        legalForm: z.string().optional(),
+    })
+  ).min(1, 'Au moins une ligne requise'),
+  paymentDetails: z.object({
+    condition: z.string(),
+    paymentMethod: z.enum(['CASH', 'CHECK', 'TRANSFER', 'CARD', 'DIRECT_DEBIT']).optional(),
+  }),
+  totalHT: z.number().nonnegative(),
+  totalTTC: z.number().nonnegative(),
+  totalVAT: z.number().nonnegative(),
+  totalDiscount: z.number().nonnegative().default(0),
+  notes: z.string().optional(),
+  internalNotes: z.string().optional(),
+  quoteId: z.string().optional(),
+  appointmentId: z.string().optional(),
+});
+
+// Schéma de validation pour la mise à jour de facture (seulement DRAFT)
+export const updateInvoiceSchema = z.object({
+  date: z.string().or(z.date()).optional(),
+  dueDate: z.string().or(z.date()).optional(),
+  items: z.array(
+    z.object({
+      description: z.string().min(1),
+      quantity: z.number().positive(),
+      unitPriceHT: z.number().nonnegative(),
+      vatRate: z.number().min(0).max(100),
+      discount: z.object({
+        type: z.enum(['percentage', 'fixed']).optional(),
+        value: z.number().min(0).optional(),
       }).optional(),
-      email: z.string().email("Email invalide"),
-      phone: z.string().min(10, "Numéro de téléphone invalide"),
-      address: z.string().min(5, "Adresse requise"),
-    }),
-  
-    // Lignes de facture
-    items: z.array(
-      z.object({
-        description: z.string().min(1, "Description requise"),
-        quantity: z.number()
-          .positive("La quantité doit être positive")
-          .max(99999, "Quantité trop élevée"),
-        unit: z.string().min(1, "Unité requise"),
-        unitPriceHT: z.number()
-          .nonnegative("Le prix doit être positif ou nul")
-          .max(1000000, "Montant trop élevé")
-          .transform(n => Number(n.toFixed(2))), // Force 2 décimales
-        vatRate: z.number()
-          .nonnegative("Le taux de TVA doit être positif ou nul")
-          .max(100, "Taux de TVA invalide"),
-        discount: z.object({
-          type: z.enum(['percentage', 'amount']),
-          value: z.number()
-            .nonnegative("La remise doit être positive ou nulle")
-            .transform(n => Number(n.toFixed(2))),
-        }).optional(),
-      })
-    ).min(1, "Au moins une ligne est requise"),
-  
-    // Détails du paiement
-    paymentDetails: z.object({
-      paymentMethod: z.enum(['cash', 'check', 'transfer', 'card', 'direct_debit'], {
-        required_error: "La méthode de paiement est requise",
-      }),
-      paymentDueDate: z.date({
-        required_error: "La date d'échéance est requise",
-      }),
-      condition: z.enum([
-        'deposit', 
-        'cash', 
-        'upon_receipt', 
-        'fifteen_days',
-        'thirty_days', 
-        'fortyfive_days', 
-        'sixty_days'
-      ], {
-        required_error: "Les conditions de paiement sont requises",
-      }),
-      depositPercentage: z.number()
-        .min(0, "Le pourcentage d'acompte doit être positif")
-        .max(100, "Le pourcentage d'acompte ne peut pas dépasser 100%")
-        .optional(),
-      earlyPaymentDiscount: z.number()
-        .min(0, "L'escompte doit être positif")
-        .max(100, "L'escompte ne peut pas dépasser 100%")
-        .optional(),
-    }),
-  
-    // Montants (calculés automatiquement mais validés)
-    totalHT: z.number()
-      .nonnegative("Le total HT doit être positif ou nul")
-      .max(1000000, "Montant total trop élevé"),
-    totalVAT: z.number()
-      .nonnegative("La TVA doit être positive ou nulle"),
-    totalTTC: z.number()
-      .nonnegative("Le total TTC doit être positif ou nul"),
-    totalDiscount: z.number()
-      .nonnegative("Le total des remises doit être positif ou nul"),
-  
-    // Statut
-    status: z.enum(['draft', 'sent', 'paid', 'partial', 'overdue', 'cancelled']),
-  
-    // Références optionnelles
-    quoteRef: z.string().optional(),
-    notes: z.string().max(1000, "Les notes ne peuvent pas dépasser 1000 caractères").optional(),
-    internalNotes: z.string().max(1000, "Les notes internes ne peuvent pas dépasser 1000 caractères").optional(),
-  
-    // Paramètres financiers obligatoires selon la loi française
-    penaltyRate: z.number()
-      .min(0, "Le taux de pénalité doit être positif")
-      .default(INVOICE_CONSTANTS.LEGAL_NOTICES.DEFAULT_PENALTY_RATE),
-    recoveryIndemnityAmount: z.number()
-      .positive("L'indemnité de recouvrement doit être positive")
-      .default(INVOICE_CONSTANTS.LEGAL_NOTICES.RECOVERY_INDEMNITY_AMOUNT),
-  
-    // Mentions légales obligatoires
-    legalNotices: z.object({
-      generalConditions: z.string(),
-      paymentPenalties: z.string(),
-      recoveryIndemnity: z.string(),
-      vatRegime: z.string(),
-    }),
-  
-    // Dates de suivi
-    createdAt: z.date(),
-    updatedAt: z.date(),
-    consultedAt: z.date().optional(),
-    paidAt: z.date().optional(),
-    cancelledAt: z.date().optional(),
-    cancellationReason: z.string().max(500, "La raison d'annulation ne peut pas dépasser 500 caractères").optional(),
-  }).refine(
-    (data) => {
-      // Validation conditionnelle : si type est 'company', company doit être défini
-      if (data.clientInfo.type === 'company') {
-        return !!data.clientInfo.company;
-      }
-      // Si type est 'individual', individual doit être défini
-      return !!data.clientInfo.individual;
-    },
-    {
-      message: "Les informations du client sont incomplètes",
-      path: ["clientInfo"],
-    }
-  ).refine(
-    (data) => {
-      // Vérification que la date d'échéance est après la date de facture
-      return data.paymentDetails.paymentDueDate > data.date;
-    },
-    {
-      message: "La date d'échéance doit être postérieure à la date de facture",
-      path: ["paymentDetails", "paymentDueDate"],
-    }
-  ).refine(
-    (data) => {
-      // Vérification du délai maximum de paiement (60 jours)
-      const maxDelay = 60 * 24 * 60 * 60 * 1000; // 60 jours en millisecondes
-      return (
-        data.paymentDetails.paymentDueDate.getTime() - data.date.getTime() <= maxDelay
-      );
-    },
-    {
-      message: "Le délai de paiement ne peut pas dépasser 60 jours",
-      path: ["paymentDetails", "paymentDueDate"],
-    }
-  );
+    })
+  ).optional(),
+  paymentDetails: z.any().optional(),
+  totalHT: z.number().optional(),
+  totalTTC: z.number().optional(),
+  totalVAT: z.number().optional(),
+  totalDiscount: z.number().optional(),
+  notes: z.string().optional(),
+  internalNotes: z.string().optional(),
+});
+
+// Schéma de validation pour l'annulation
+export const cancelInvoiceSchema = z.object({
+  reason: z.string().min(1, "La raison d'annulation est obligatoire").max(500),
+});
+
+// Schéma de validation pour l'enregistrement d'un paiement
+export const createPaymentSchema = z.object({
+  amount: z.number().positive('Le montant doit être positif'),
+  method: z.enum(['CASH', 'CHECK', 'TRANSFER', 'CARD', 'DIRECT_DEBIT']),
+  date: z.string().or(z.date()).optional(),
+  reference: z.string().optional(),
+  notes: z.string().optional(),
+});

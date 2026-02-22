@@ -1,12 +1,15 @@
 // app/api/clients/[Id]/vehicles/[vehicleId]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin, handleAuthError } from "@/lib/apiAuth";
 
 export async function DELETE(
   request: Request,
   { params }: { params: { Id: string; vehicleId: string } }
 ) {
   try {
+    await requireAdmin();
+
     console.log("Tentative de suppression du véhicule", {
       vehicleId: params.vehicleId,
       clientId: params.Id
@@ -72,6 +75,8 @@ export async function DELETE(
 
     return NextResponse.json(updatedClient);
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error("Erreur lors de la suppression:", error);
     return NextResponse.json(
       { error: "Erreur lors de la suppression du véhicule" },

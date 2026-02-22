@@ -4,9 +4,11 @@ import { generatePDF } from '@/lib/generatePDF';
 import { prisma } from '@/lib/prisma';
 import { transformPrismaQuoteToQuote } from '@/lib/utils';
 import { Quote } from '@/types/quote';
+import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
 
 export async function POST(request: Request) {
   try {
+    await requireAdmin();
     const data = await request.json();
     let quote: Quote;
 
@@ -60,9 +62,11 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Erreur lors de la génération du PDF:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Erreur lors de la génération du PDF',
         details: error instanceof Error ? error.message : 'Erreur inconnue'
       },
@@ -74,6 +78,7 @@ export async function POST(request: Request) {
 // Route pour récupérer un PDF existant
 export async function GET(request: Request) {
   try {
+    await requireAdmin();
     const { searchParams } = new URL(request.url);
     const quoteId = searchParams.get('id');
 
@@ -109,9 +114,11 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Erreur lors de la récupération du PDF:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Erreur lors de la récupération du PDF',
         details: error instanceof Error ? error.message : 'Erreur inconnue'
       },

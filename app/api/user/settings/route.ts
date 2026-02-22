@@ -2,26 +2,12 @@
 import { NextResponse } from 'next/server';
 import { hash, compare } from 'bcryptjs';
 import mongoose from 'mongoose';
-import { cookies } from 'next/headers';
-import { jwtVerify } from 'jose';
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'votre-secret-tres-securise'
-);
-
-// Récupérer l'utilisateur à partir du token
-async function getUserFromToken() {
-  const token = cookies().get('auth_token')?.value;
-  if (!token) throw new Error('Non authentifié');
-
-  const { payload } = await jwtVerify(token, JWT_SECRET);
-  return payload;
-}
+import { requireAuth, handleAuthError } from '@/lib/apiAuth';
 
 // Route GET pour récupérer les infos de l'utilisateur
 export async function GET() {
   try {
-    const payload = await getUserFromToken();
+    const payload = await requireAuth();
     const user = await mongoose.models.User.findById(payload.id)
       .select('-password')
       .lean();
@@ -42,7 +28,7 @@ export async function GET() {
 // Route PATCH pour mettre à jour les infos
 export async function PATCH(request: Request) {
   try {
-    const payload = await getUserFromToken();
+    const payload = await requireAuth();
     const data = await request.json();
     const { name, email, phone, address, currentPassword, newPassword } = data;
 

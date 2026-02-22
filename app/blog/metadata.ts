@@ -2,19 +2,19 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Blog Mécanique & Performance | Bouëxière Méca Perf',
-  description: 'Découvrez nos articles sur la mécanique automobile, la performance moteur, et les conseils d\'entretien. Expertise technique et guides pratiques.',
+  title: 'Blog Mécanique & Performance',
+  description: 'Articles sur la mécanique automobile, la performance moteur et les conseils d\'entretien. Expertise technique et guides pratiques.',
   openGraph: {
-    title: 'Blog Mécanique & Performance | Bouëxière Méca Perf',
-    description: 'Découvrez nos articles sur la mécanique automobile, la performance moteur, et les conseils d\'entretien. Expertise technique et guides pratiques.',
+    title: 'Blog Mécanique & Performance | Bouëxière Méca Performance',
+    description: 'Articles sur la mécanique automobile, la performance moteur et les conseils d\'entretien.',
     type: 'website',
     locale: 'fr_FR',
     images: [
       {
-        url: 'https://bouexiere-meca-perf.fr/og-blog.jpg',
+        url: '/images/logoe.jpg',
         width: 1200,
         height: 630,
-        alt: 'Bouëxière Méca Perf Blog',
+        alt: 'Bouëxière Méca Performance Blog',
       },
     ],
   },
@@ -24,26 +24,25 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Blog Mécanique & Performance | Bouëxière Méca Perf',
-    description: 'Découvrez nos articles sur la mécanique automobile, la performance moteur, et les conseils d\'entretien.',
-    images: ['https://bouexiere-meca-perf.fr/og-blog.jpg'],
-  }
+    title: 'Blog Mécanique & Performance | Bouëxière Méca Performance',
+    description: 'Articles sur la mécanique automobile, la performance moteur et les conseils d\'entretien.',
+    images: ['/images/logoe.jpg'],
+  },
 };
 
-// Fonction pour générer les métadonnées dynamiques pour les articles individuels
 export function generateArticleMetadata(title: string, excerpt: string, image: string, date: string) {
   return {
-    title: `${title} | Bouëxière Méca Perf`,
+    title,
     description: excerpt,
     openGraph: {
       title,
       description: excerpt,
       type: 'article',
       publishedTime: date,
-      authors: ['Bouëxière Méca Perf'],
+      authors: ['Bouëxière Méca Performance'],
       images: [
         {
-          url: `https://bouexiere-meca-perf.fr${image}`,
+          url: image,
           width: 1200,
           height: 630,
           alt: title,
@@ -54,7 +53,7 @@ export function generateArticleMetadata(title: string, excerpt: string, image: s
       card: 'summary_large_image',
       title,
       description: excerpt,
-      images: [`https://bouexiere-meca-perf.fr${image}`],
+      images: [image],
     },
   };
 }

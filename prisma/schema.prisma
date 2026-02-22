@@ -119,17 +119,121 @@ model Availability {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+// Statuts possibles pour une facture
+enum InvoiceStatus {
+  DRAFT      // Brouillon
+  SENT       // Envoyée
+  PAID       // Payée
+  PARTIAL    // Partiellement payée
+  OVERDUE    // En retard
+  CANCELLED  // Annulée
+}
+
+// Méthode de paiement
+enum PaymentMethod {
+  CASH           // Espèces
+  CHECK          // Chèque
+  TRANSFER       // Virement bancaire
+  CARD           // Carte bancaire
+  DIRECT_DEBIT   // Prélèvement
+}
+
 model Invoice {
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  number          String        @unique  // Numéro séquentiel (FA2026-000001)
+  date            DateTime      @default(now())
+  dueDate         DateTime               // Date d'échéance
+  status          InvoiceStatus @default(DRAFT)
+
+  // Client
+  clientId        String        @db.ObjectId
+  client          Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientInfo      Json          // Snapshot des infos client au moment de la création
+
+  // Rendez-vous (optionnel)
+  appointmentId   String?       @db.ObjectId
+  appointment     Appointment?  @relation(fields: [appointmentId], references: [id])
+
+  // Devis source (optionnel)
+  quoteId         String?       @db.ObjectId
+  quote           Quote?        @relation(fields: [quoteId], references: [id])
+
+  // Montants
+  totalHT         Float
+  totalTTC        Float
+  totalVAT        Float
+  totalDiscount   Float         @default(0)
+
+  // Contenu
+  items           Json[]        // Lignes de facture
+  paymentDetails  Json          // Conditions de paiement
+
+  // Mentions légales obligatoires
+  legalNotices    Json          // { generalConditions, paymentPenalties, recoveryIndemnity, vatRegime }
+
+  // Paramètres financiers (loi française)
+  penaltyRate            Float  @default(10.40) // Taux pénalités de retard
+  recoveryIndemnityAmount Float @default(40)    // Indemnité forfaitaire recouvrement (40€)
+
+  // Notes
+  notes           String?
+  internalNotes   String?
+
+  // Suivi
+  sentAt          DateTime?
+  paidAt          DateTime?
+  cancelledAt     DateTime?
+  cancellationReason String?
+
+  // Paiements
+  payments        Payment[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Payment {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceId   String        @db.ObjectId
+  invoice     Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount      Float
+  method      PaymentMethod
+  date        DateTime      @default(now())
+  reference   String?       // Numéro de chèque, référence virement, etc.
+  notes       String?
+  createdAt   DateTime      @default(now())
+}
+
+model Counter {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   // "invoice" ou "quote"
+  year      Int      // 2026
+  sequence  Int      @default(0)
+
+  @@unique([name, year])
+}
+
+model CompanySettings {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  clientId    String   @db.ObjectId
-  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  appointmentId String?     @db.ObjectId
-  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
-  amount        Float
-  status        String      @default("draft")
-  dueDate       DateTime
-  items         Json[]
-  createdAt     DateTime    @default(now())
+  companyName String
+  legalForm   String   @default("Auto-entrepreneur")
+  siret       String
+  address     String
+  phone       String
+  email       String
+  website     String?
+  logo        String?  // URL ou base64
+
+  // Coordonnées bancaires
+  bankName    String?
+  bankIBAN    String?
+  bankBIC     String?
+
+  // Régime TVA
+  vatRegime   String   @default("TVA non applicable, art. 293 B du CGI")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model BlogPost {
@@ -197,6 +301,9 @@ model Quote {
   // Tracking email
   emailData    EmailData[]
   events       QuoteEvent[]
+
+  // Factures générées depuis ce devis
+  invoices     Invoice[]
 }
 
 // Statuts possibles pour un devis

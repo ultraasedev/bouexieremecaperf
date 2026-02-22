@@ -2,9 +2,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { QuoteStatus } from '@prisma/client';
+import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
 
 export async function GET() {
   try {
+    await requireAdmin();
+
     const quotes = await prisma.quote.findMany({
       include: {
         client: true,
@@ -57,6 +60,8 @@ export async function GET() {
 
     return NextResponse.json(transformedQuotes);
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Erreur lors de la récupération des devis:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la récupération des devis' },
@@ -67,6 +72,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    await requireAdmin();
     const body = await request.json();
     console.log('Données reçues:', body);
 
@@ -145,9 +151,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json(quote);
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Erreur lors de la création du devis:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Erreur lors de la création du devis',
         details: error instanceof Error ? error.message : 'Erreur inconnue'
       },
@@ -158,6 +166,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    await requireAdmin();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -210,6 +219,8 @@ export async function DELETE(request: Request) {
     });
 
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Erreur lors de la suppression du devis:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la suppression du devis' },

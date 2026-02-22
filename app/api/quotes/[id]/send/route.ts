@@ -4,12 +4,14 @@ import { prisma } from '@/lib/prisma';
 import { generatePDF } from '@/lib/generatePDF';
 import { sendQuoteEmail } from '@/lib/email';
 import { transformPrismaQuoteToQuote } from '@/lib/utils';
+import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
 
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    await requireAdmin();
     const formData = await request.formData();
     const jsonData = formData.get('data');
     const attachments = formData.getAll('attachments');
@@ -121,8 +123,10 @@ export async function POST(
     });
 
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Erreur lors de l\'envoi du devis:', error);
-    
+
     let errorMessage = 'Erreur lors de l\'envoi du devis';
     let statusCode = 500;
 

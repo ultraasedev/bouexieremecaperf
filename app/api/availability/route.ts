@@ -10,6 +10,7 @@ import {
 } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { requireAdmin, handleAuthError } from "@/lib/apiAuth";
 
 // Validation plus stricte des créneaux horaires
 const TimeSlotSchema = z
@@ -123,6 +124,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    await requireAdmin();
     const data = await request.json();
 
     // Validation des données
@@ -173,6 +175,8 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error("Erreur:", error);
     return NextResponse.json(
       { error: "Erreur lors de la sauvegarde des disponibilités" },
@@ -183,6 +187,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    await requireAdmin();
     const { searchParams } = new URL(request.url);
     const date = validateDateParam(searchParams.get("date"));
 
@@ -204,6 +209,8 @@ export async function DELETE(request: Request) {
       message: "Disponibilités supprimées avec succès",
     });
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error("Erreur:", error);
     return NextResponse.json(
       { error: "Erreur lors de la suppression des disponibilités" },

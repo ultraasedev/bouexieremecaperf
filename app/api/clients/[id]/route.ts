@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Prisma, AppointmentStatus, QuoteStatus } from '@prisma/client';
+import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
 
 /**
  * Interfaces pour la gestion des véhicules et des mises à jour
@@ -89,6 +90,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    await requireAdmin();
+
     const client = await prisma.client.findUnique({
       where: { id: params.id },
       include: {
@@ -126,7 +129,9 @@ export async function GET(
         invoices: {
           select: {
             id: true,
-            amount: true,
+            number: true,
+            totalHT: true,
+            totalTTC: true,
             status: true,
             dueDate: true,
             items: true,
@@ -173,9 +178,9 @@ export async function GET(
         ...client.invoices.map(invoice => ({
           id: invoice.id,
           type: 'invoice' as const,
-          number: invoice.id.toString(),
+          number: invoice.number,
           date: invoice.createdAt,
-          totalTTC: invoice.amount,
+          totalTTC: invoice.totalTTC,
           status: invoice.status,
           createdAt: invoice.createdAt
         })),
@@ -198,6 +203,8 @@ export async function GET(
 
     return NextResponse.json(transformedClient);
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Error fetching client:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la récupération du client' },
@@ -210,6 +217,7 @@ export async function GET(
  */
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
+    await requireAdmin();
     const data = await request.json();
     
     const updatedClient = await prisma.client.update({
@@ -251,9 +259,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         ...updatedClient.invoices.map(invoice => ({
           id: invoice.id,
           type: 'invoice' as const,
-          number: invoice.id.toString(),
+          number: invoice.number,
           date: invoice.createdAt,
-          totalTTC: invoice.amount,
+          totalTTC: invoice.totalTTC,
           status: invoice.status,
           createdAt: invoice.createdAt
         })),
@@ -271,6 +279,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     return NextResponse.json(transformedClient);
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Error:', error);
     return NextResponse.json({ error: 'Mise à jour échouée' }, { status: 500 });
   }
@@ -280,6 +290,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
  */
 export async function POST(request: Request) {
   try {
+    await requireAdmin();
     const data = await request.json() as UpdateClientRequest;
 
     // Validation des données communes requises
@@ -414,9 +425,9 @@ export async function POST(request: Request) {
         ...newClient.invoices.map(invoice => ({
           id: invoice.id,
           type: 'invoice' as const,
-          number: invoice.id.toString(),
+          number: invoice.number,
           date: invoice.createdAt,
-          totalTTC: invoice.amount,
+          totalTTC: invoice.totalTTC,
           status: invoice.status,
           createdAt: invoice.createdAt
         })),
@@ -439,9 +450,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json(transformedClient, { status: 201 });
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Error creating client:', error);
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Erreur lors de la création du client'
       },
       { status: 500 }
@@ -457,6 +470,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    await requireAdmin();
+
     // Vérification des rendez-vous en cours
     const clientWithAppointments = await prisma.client.findUnique({
       where: { id: params.id },
@@ -493,6 +508,8 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error('Error deleting client:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la suppression du client' },

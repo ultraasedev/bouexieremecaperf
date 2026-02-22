@@ -1,9 +1,11 @@
 // app/api/clients/[Id]/vehicles/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin, handleAuthError } from "@/lib/apiAuth";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
+    await requireAdmin();
     const data = await request.json();
     const vehicleData = {
       ...data,
@@ -24,7 +26,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
         invoices: {
           select: {
             id: true,
-            amount: true,
+            number: true,
+            totalHT: true,
+            totalTTC: true,
             status: true,
             dueDate: true,
             items: true,
@@ -48,6 +52,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     return NextResponse.json(updatedClient);
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error("Error:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
@@ -55,6 +61,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
+    await requireAdmin();
     const data = await request.json();
     const { id: vehicleId, ...vehicleData } = data;
 
@@ -84,6 +91,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     return NextResponse.json(transformedClient);
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error("Error:", error);
     return NextResponse.json({ error: "Erreur de mise à jour" }, { status: 500 });
   }
@@ -95,6 +104,8 @@ export async function DELETE(
   { params }: { params: { clientId: string; vehicleId: string } }
 ) {
   try {
+    await requireAdmin();
+
     // Vérifier que le véhicule existe et appartient bien au client
     const vehicle = await prisma.vehicle.findFirst({
       where: {
@@ -138,6 +149,8 @@ export async function DELETE(
 
     return NextResponse.json(updatedClient);
   } catch (error) {
+    const authResponse = handleAuthError(error);
+    if (authResponse) return authResponse;
     console.error("Erreur lors de la suppression:", error);
     return NextResponse.json(
       { error: "Erreur lors de la suppression du véhicule" },
