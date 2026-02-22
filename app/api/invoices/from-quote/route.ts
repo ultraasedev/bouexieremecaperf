@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
+
+export const dynamic = 'force-dynamic';
 import { getNextInvoiceNumber } from '@/lib/invoiceNumber';
 import { getDefaultLegalNotices, transformPrismaInvoice } from '@/lib/invoiceUtils';
 import { z } from 'zod';

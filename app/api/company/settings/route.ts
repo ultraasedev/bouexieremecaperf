@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 const updateCompanySettingsSchema = z.object({
   companyName: z.string().min(1, 'Nom requis'),
   legalForm: z.string().optional(),

@@ -5,6 +5,8 @@ import { generatePDF } from '@/lib/generatePDF';
 import { transformPrismaQuoteToQuote } from '@/lib/utils';
 import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }

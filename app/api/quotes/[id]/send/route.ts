@@ -6,6 +6,8 @@ import { sendQuoteEmail } from '@/lib/email';
 import { transformPrismaQuoteToQuote } from '@/lib/utils';
 import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }

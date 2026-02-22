@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { QuoteStatus } from '@prisma/client';
 import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     await requireAdmin();

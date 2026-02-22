@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { transformPrismaQuoteToQuote } from '@/lib/utils';
 import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
+
+export const dynamic = 'force-dynamic';
 import { updateQuoteSchema } from '@/lib/validations';
 
 export async function GET(

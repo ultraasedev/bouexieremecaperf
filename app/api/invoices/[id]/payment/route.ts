@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
+
+export const dynamic = 'force-dynamic';
 import { transformPrismaInvoice } from '@/lib/invoiceUtils';
 import { createPaymentSchema } from '@/types/invoice';
 

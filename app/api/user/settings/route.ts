@@ -4,6 +4,8 @@ import { hash, compare } from 'bcryptjs';
 import mongoose from 'mongoose';
 import { requireAuth, handleAuthError } from '@/lib/apiAuth';
 
+export const dynamic = 'force-dynamic';
+
 // Route GET pour récupérer les infos de l'utilisateur
 export async function GET() {
   try {

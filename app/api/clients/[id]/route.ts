@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { Prisma, AppointmentStatus, QuoteStatus } from '@prisma/client';
 import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Interfaces pour la gestion des véhicules et des mises à jour
  */

@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { sendAppointmentEmail } from '@/lib/email';
 import { AppointmentStatus, AppointmentEmailData } from '@/types/appoitement';
 import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
+
+export const dynamic = 'force-dynamic';
 import { updateAppointmentSchema } from '@/lib/validations';
 
 // Helper pour formater la date

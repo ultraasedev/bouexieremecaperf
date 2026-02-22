@@ -6,6 +6,8 @@ import { transformPrismaQuoteToQuote } from '@/lib/utils';
 import { Quote } from '@/types/quote';
 import { requireAdmin, handleAuthError } from '@/lib/apiAuth';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     await requireAdmin();
