@@ -100,10 +100,8 @@ export async function GET() {
     return NextResponse.json(reviews);
   } catch (error) {
     console.error('Error fetching reviews:', error);
-    return NextResponse.json(
-      { message: 'Erreur lors de la récupération des avis' },
-      { status: 500 }
-    );
+    // Retourner les avis par défaut en cas d'erreur DB
+    return NextResponse.json(defaultReviews);
   }
 }
 

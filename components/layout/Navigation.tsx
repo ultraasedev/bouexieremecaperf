@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Dialog } from '@headlessui/react';
+import { Dialog, DialogPanel } from '@headlessui/react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const navigation = [
@@ -120,7 +120,7 @@ export default function Navigation() {
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" />
         
         {/* Panneau mobile avec largeur adaptative */}
-        <Dialog.Panel className="fixed inset-y-0 right-0 z-50 w-[280px] xs:w-[320px] sm:w-[380px] overflow-y-auto bg-black/95 px-4 xs:px-6 py-4 xs:py-6">
+        <DialogPanel className="fixed inset-y-0 right-0 z-50 w-[280px] xs:w-[320px] sm:w-[380px] overflow-y-auto bg-black/95 px-4 xs:px-6 py-4 xs:py-6">
           <div className="flex items-center justify-between">
             {/* Logo mobile avec taille adaptative */}
             <Link 
@@ -174,7 +174,7 @@ export default function Navigation() {
               </div>
             </div>
           </div>
-        </Dialog.Panel>
+        </DialogPanel>
       </Dialog>
     </header>
   );

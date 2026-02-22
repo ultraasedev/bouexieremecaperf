@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     
 
     // Retourner le PDF
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
@@ -99,7 +99,7 @@ export async function GET(request: Request) {
     const transformedQuote = transformPrismaQuoteToQuote(quote);
     const pdfBuffer = await generatePDF(transformedQuote);
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

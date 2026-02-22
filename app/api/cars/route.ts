@@ -3,21 +3,17 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BASE_URL = 'https://www.carqueryapi.com/api/0.3/';
 
-// La nouvelle façon de configurer les options de route dans Next.js 13+
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-export const revalidate = 3600; // revalidate every hour
 
 export async function GET(request: NextRequest) {
   try {
-    // Récupérer les paramètres de requête
     const searchParams = request.nextUrl.searchParams;
     const cmd = searchParams.get('cmd');
     const make = searchParams.get('make');
     const model = searchParams.get('model');
     const year = searchParams.get('year');
 
-    // Construire l'URL de l'API
     let apiUrl = `${BASE_URL}?format=json`;
     if (cmd) apiUrl += `&cmd=${cmd}`;
     if (make) apiUrl += `&make=${make}`;
@@ -26,16 +22,17 @@ export async function GET(request: NextRequest) {
 
     const response = await fetch(apiUrl, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      }
+      cache: 'no-store',
     });
 
     if (!response.ok) {
       throw new Error(`API returned ${response.status}`);
     }
 
-    const data = await response.json();
+    const text = await response.text();
+    // CarQuery API sometimes wraps response in JSONP callback, strip it
+    const jsonStr = text.replace(/^\?\(/, '').replace(/\);?$/, '');
+    const data = JSON.parse(jsonStr);
 
     return NextResponse.json(data, {
       headers: {
@@ -55,7 +52,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Gestionnaire des requêtes OPTIONS pour CORS
 export async function OPTIONS(request: NextRequest) {
   return NextResponse.json(
     {},

@@ -26,7 +26,7 @@ export async function GET(
     const transformedQuote = transformPrismaQuoteToQuote(quote);
     const pdfBuffer = await generatePDF(transformedQuote);
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
