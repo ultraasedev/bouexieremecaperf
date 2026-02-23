@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -54,6 +55,15 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
       <div className="bg-[#111] p-8 rounded-lg shadow-lg w-full max-w-md">
+        <div className="flex justify-center mb-6">
+          <Image
+            src="/logo.png"
+            alt="Bouexiere Meca Perf"
+            width={180}
+            height={60}
+            priority
+          />
+        </div>
         <h1 className="text-3xl font-bold text-white mb-6 text-center">
           Connexion
         </h1>

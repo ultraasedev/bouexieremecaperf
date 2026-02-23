@@ -122,10 +122,15 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Erreur lors de la connexion:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
     return NextResponse.json(
-      { 
+      {
         success: false,
-        error: 'Une erreur est survenue lors de la connexion' 
+        error: errorMessage.includes('JWT_SECRET')
+          ? 'Configuration serveur manquante (JWT_SECRET)'
+          : errorMessage.includes('MONGODB') || errorMessage.includes('prisma') || errorMessage.includes('connect')
+          ? 'Erreur de connexion à la base de données'
+          : 'Une erreur est survenue lors de la connexion'
       },
       { status: 500 }
     );
